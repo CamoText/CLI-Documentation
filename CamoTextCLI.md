@@ -1,4 +1,5 @@
-# CamoText CLI Documentation
+# CamoTextCLI Documentation
+*version 0.1.1*
 
 ## Overview
 
