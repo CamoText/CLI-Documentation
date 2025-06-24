@@ -3,16 +3,13 @@
 ## Overview
 
 CamoText is now distributed as two executables: one for the graphical user interface (GUI) and one for the command-line
-interface (CLI).
+interface (CLI). This documentation is for the latter; consult the [User Guide](https://camotext.ai/assets/CamoTextUserGuide.pdf) for the CamoText GUI app.
 
-- **camotext**: Always launches the graphical user interface (GUI), regardless of command-line arguments.
-- **camo** or **camotextcli**: Always runs in headless CLI mode for batch processing and automated workflows, regardless
-  of how it is invoked. This is now implemented as a dedicated CLI entry-point script (see below).
+**camo** or **camotextcli**: Always runs in headless CLI mode for quick and customizable anonymizations, batch processing, and automated workflows.
 
 This approach makes CamoText suitable for both interactive use and server environments, CI/CD pipelines, and automated
 data processing tasks, including AI agents, with explicit control over which mode is launched.
 
-> Use 'camotext' for GUI and 'camo' or 'camotextcli' for CLI.
 
 ## Features
 
@@ -42,64 +39,28 @@ For advanced users, packagers, or those building from source, there is now a ded
 
 ## Quick Start
 
-For immediate help and argument reference (CLI):
+See Setting PATH below. For immediate help and argument reference:
 
 ```bash
 # Get comprehensive help (CLI)
 camo --help    # Windows
 ./camo --help  # macOS/Linux
-# Or, if building from source:
-python camotextcli.py --help
 
 # Get help in short form (CLI)
 camo -h        # Windows
 ./camo -h      # macOS/Linux
-python camotextcli.py -h
 ```
 
 Both forms display organized argument groups with descriptions, types, and examples.
 
-To launch the GUI, simply run:
-
-```bash
-camotext.exe         # Windows
-./camotext           # macOS/Linux
-```
-
 ## System Requirements
 
-CamoText is distributed as self-contained executables with all dependencies bundled:
+CamoTextCLI is distributed as self-contained frozen executable with all dependencies bundled:
 
 - **No Python installation required** - All dependencies included in executables
 - **No additional downloads** - NLP model bundled internally
 - **Cross-platform support** - Native executables for Windows, macOS, and Linux
 - **No environment setup** - Ready to run immediately after download
-
-## GUI vs CLI Mode
-
-CamoText now operates in two distinct modes, each with its own executable:
-
-### GUI Mode (camotext)
-
-When launched as 'camotext' (or 'camotext.exe'), the graphical user interface opens:
-
-```bash
-# Double-click the executable or run from command line
-camotext.exe                     # Windows
-./camotext                       # macOS/Linux
-```
-
-**GUI Features:**
-
-- Interactive drag-and-drop file processing
-- Visual anonymization key management with checkboxes
-- Real-time text editing and highlighting
-- Theme switching (light/dark mode)
-- Manual text selection and anonymization
-- Category-based entity reversion
-- New window output viewing with search
-
-### CLI Mode (camo or camotextcli)
 
 When launched as 'camo', 'camo.exe', 'camotextcli', or 'camotextcli.exe', the command-line interface runs in headless
 mode:
@@ -133,25 +94,50 @@ camo --input-dir ./docs --output-dir ./processed
 | **File Size**    | Separate executable            | Separate executable                        |
 | **Server Use**   | Not suitable                   | Ideal for server environments              |
 
-### Executable Naming
+### Setting PATH
 
-- Use **camotext** for GUI mode (interactive, double-click, or command line)
-- Use **camo** or **camotextcli** for CLI mode (headless, scriptable)
+
+- One PATH is set, use **camo** to invoke CLI mode (headless, scriptable) rather than having to specify the CamoTextCLI directory in a string
+
+*Setting PATH on Windows:*
+
+1) Win+R → type sysdm.cpl → Enter.
+
+2) “Advanced” tab → Environment Variables…
+
+3) Under User variables (or System variables for all users) select Path → Edit.
+
+4) New → paste C:\full\path\to\CamoTextCLI (your folder containing camo.exe) → OK all the way out.
+
+
+*Setting PATH on MacOS*
+
+Edit your shell’s startup file. Recent macOS versions default to zsh.
+
+1) Open your shell config in a text editor. run:
+```bash
+nano ~/.zshrc
+```
+
+2) Add this line at the bottom, replacing /full/path/to with the folder containing camo.app:
+```bash
+export PATH="/full/path/to:$PATH"
+```
+
+3) Save (Ctrl + O, Enter) and exit (Ctrl + X).
+
+4) Reload the file so you don’t have to restart Terminal:
+```bash
+source ~/.zshrc
+```
+
 
 ### Usage Examples
 
-> **Note:**
->
-> - Use `camotext` (or `camotext.exe`) for the GUI (graphical interface).
-> - Use `camo` or `camotextcli` (or their `.exe` variants) for the CLI (headless, scriptable, batch, or automation
->   workflows).
-> - Never use `camotext` for CLI mode, and never use `camo`/`camotextcli` for GUI mode.
+> **Note:** Usage examples assume PATH has been set
+
 
 ```bash
-# GUI mode
-camotext.exe           # Windows
-./camotext             # macOS/Linux
-
 # CLI mode
 camo --input file.txt --output out.txt           # Windows
 camotextcli --input file.txt --output out.txt    # Windows
@@ -433,7 +419,7 @@ camo --priority "confidential" --ignore-category "organization" --input document
 - `ACCOUNT` - Account handles and numbers
 - `UUID` - Universal unique identifiers
 - `CRYPTO_ADDRESS` - Cryptocurrency addresses
-- And more... (see main documentation for complete list)
+- And more... (see the [CamoText User Guide](https://camotext.ai/assets/CamoTextUserGuide.pdf) for the complete list of data categories)
 
 ### Key File Placement
 
