@@ -6,7 +6,7 @@
 CamoText is now distributed as two executables: one for the graphical user interface (GUI) and one for the command-line
 interface (CLI). This documentation is for the latter; consult the [User Guide](https://camotext.ai/assets/CamoTextUserGuide.pdf) for the CamoText GUI app.
 
-**camo** or **camotextcli**: Always runs in headless CLI mode for quick and customizable anonymizations, batch processing, and automated workflows.
+CamoTextCLI always runs in headless CLI mode for quick and customizable anonymizations, batch processing, and automated workflows.
 
 This approach makes CamoText suitable for both interactive use and server environments, CI/CD pipelines, and automated
 data processing tasks, including AI agents, with explicit control over which mode is launched.
@@ -27,11 +27,7 @@ data processing tasks, including AI agents, with explicit control over which mod
 - **Comprehensive Help**: Built-in help system with organized argument documentation
 - **Error Handling**: Clear error messages with suggestions for valid arguments
 
-### Dedicated CLI Entry Point (camotextcli.py)
-
-For advanced users, packagers, or those building from source, there is now a dedicated CLI launcher script:
-
-- Bundled executable 'camo'/'camotextcli'
+- Bundled executable 'camo'
 - This script imports only the CLI logic and never imports or runs any GUI code.
 - It is safe for use in headless/server environments, containers, and CI/CD pipelines.
 - Use this entry point for all CLI/batch/automation workflows.
@@ -63,9 +59,6 @@ CamoTextCLI is distributed as self-contained frozen executable with all dependen
 - **Cross-platform support** - Native executables for Windows, macOS, and Linux
 - **No environment setup** - Ready to run immediately after download
 
-When launched as 'camo', 'camo.exe', 'camotextcli', or 'camotextcli.exe', the command-line interface runs in headless
-mode:
-
 ```bash
 # CLI executable, always headless
 camo --input document.txt --output anonymized.txt       # Windows
@@ -86,7 +79,7 @@ camo --input-dir ./docs --output-dir ./processed
 
 ---
 
-| Aspect           | GUI Mode (camotext)            | CLI Mode (camo/camotextcli/camotextcli.py) |
+| Aspect           | GUI Mode (camotext)            | CLI Mode (camo) |
 | ---------------- | ------------------------------ | ------------------------------------------ |
 | **Execution**    | Interactive window opens       | Runs in terminal/command prompt            |
 | **Dependencies** | Requires display/window system | Headless compatible                        |
@@ -111,9 +104,10 @@ camo --input-dir ./docs --output-dir ./processed
 4) New → paste C:\full\path\to\CamoTextCLI (your folder containing camo.exe) → OK all the way out.
 
 
+
 *Setting PATH on MacOS*
 
-Edit your shell’s startup file. Recent macOS versions default to zsh.
+***Option A***: Edit your shell’s startup file. Recent macOS versions default to zsh.
 
 1) Open your shell config in a text editor. run:
 ```bash
@@ -132,6 +126,25 @@ export PATH="/full/path/to:$PATH"
 source ~/.zshrc
 ```
 
+***Option B***: Symlink into a directory that’s already on your PATH
+
+Most macOS systems already include /usr/local/bin (or /opt/homebrew/bin) in your shell’s PATH. Just create a symbolic link:
+
+1) create /usr/local/bin if needed
+```bash
+sudo mkdir -p /usr/local/bin
+```
+
+2) link the camo executable
+```bash
+sudo ln -s ~/Desktop/camo.app/Contents/MacOS/camo /usr/local/bin/camo
+```
+
+3) Open a new terminal and simply run:
+camo --help
+
+
+
 
 ### Usage Examples
 
@@ -141,9 +154,9 @@ source ~/.zshrc
 ```bash
 # CLI mode
 camo --input file.txt --output out.txt           # Windows
-camotextcli --input file.txt --output out.txt    # Windows
+
 ./camo --input file.txt --output out.txt         # macOS/Linux
-./camotextcli --input file.txt --output out.txt  # macOS/Linux
+
 ```
 
 ### Getting Help
@@ -169,7 +182,7 @@ If invalid arguments are provided, CamoText displays helpful error messages:
 
 ```bash
 # Invalid argument example
-camotext.exe --invalid-arg file.txt
+camo --invalid-arg file.txt
 
 # Output:
 # Error: Invalid argument(s): --invalid-arg
@@ -239,15 +252,15 @@ All CLI arguments, organized into groups:
 ```bash
 # Display comprehensive help with all arguments organized by category
 camo --help                # Windows
-camotextcli --help         # Windows
+
 ./camo --help              # macOS/Linux
-./camotextcli --help       # macOS/Linux
+
 
 # Short form help
 camo -h                    # Windows
-camotextcli -h             # Windows
+
 ./camo -h                  # macOS/Linux
-./camotextcli -h           # macOS/Linux
+
 
 # Example help output structure:
 # CamoText: Anonymize text from files or strings.
@@ -308,27 +321,27 @@ camo --help
 ```bash
 # Anonymize a text file to STDOUT (using long forms)
 camo --input document.txt                               # Windows
-camotextcli --input document.txt                        # Windows
+
 ./camo --input document.txt                             # macOS/Linux
-./camotextcli --input document.txt                      # macOS/Linux
+
 
 # Anonymize a text file to STDOUT (using short forms)
 camo -i document.txt                                    # Windows
-camotextcli -i document.txt                             # Windows
+
 ./camo -i document.txt                                  # macOS/Linux
-./camotextcli -i document.txt                           # macOS/Linux
+
 
 # Anonymize a PDF and save to file (using long forms)
 camo --input report.pdf --output anonymized_report.pdf   # Windows
-camotextcli --input report.pdf --output anonymized_report.pdf # Windows
+
 ./camo --input report.pdf --output anonymized_report.pdf # macOS/Linux
-./camotextcli --input report.pdf --output anonymized_report.pdf # macOS/Linux
+
 
 # Anonymize a PDF and save to file (using short forms)
 camo -i report.pdf -o anonymized_report.pdf              # Windows
-camotextcli -i report.pdf -o anonymized_report.pdf       # Windows
+
 ./camo -i report.pdf -o anonymized_report.pdf            # macOS/Linux
-./camotextcli -i report.pdf -o anonymized_report.pdf     # macOS/Linux
+
 ```
 
 ### Raw Text Processing
@@ -1022,12 +1035,12 @@ batch_success, output, errors = agent.batch_process('./docs', './processed',
 
 ## License and Support
 
-CamoText CLI is subject to the CamoText EULA. For technical support or feature requests, please refer to the main
+CamoTextCLI is subject to the CamoText EULA. For technical support or feature requests, please refer to the main
 documentation or contact support channels.
 
 ---
 
-_This documentation covers CamoText CLI version 0.1.1. For the latest updates, please check the release notes._
+_This documentation covers CamoTextCLI version 0.1.1. For the latest updates, please check the release notes._
 
 ### Configuration File
 
