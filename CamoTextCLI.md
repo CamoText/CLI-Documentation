@@ -1,16 +1,5 @@
-# CamoTextCLI Documentation
-*version 0.1.1*
-
-## Overview
-
-CamoText is now distributed as two executables: one for the graphical user interface (GUI) and one for the command-line
-interface (CLI). This documentation is for the latter; consult the [User Guide](https://camotext.ai/assets/CamoTextUserGuide.pdf) for the CamoText GUI app.
-
-CamoTextCLI always runs in headless CLI mode for quick and customizable anonymizations, batch processing, and automated workflows.
-
-This approach makes CamoText suitable for both interactive use and server environments, CI/CD pipelines, and automated
-data processing tasks, including AI agents, with explicit control over which mode is launched.
-
+# CamoText CLI Documentation
+*version 1.0.0*
 
 ## Features
 
@@ -26,72 +15,12 @@ data processing tasks, including AI agents, with explicit control over which mod
 - **Progress Reporting**: Real-time progress updates during batch operations
 - **Comprehensive Help**: Built-in help system with organized argument documentation
 - **Error Handling**: Clear error messages with suggestions for valid arguments
-
-- Bundled executable 'camo'
-- This script imports only the CLI logic and never imports or runs any GUI code.
-- It is safe for use in headless/server environments, containers, and CI/CD pipelines.
-- Use this entry point for all CLI/batch/automation workflows.
-
----
-
-## Quick Start
-
-See Setting PATH below. For immediate help and argument reference:
-
-```bash
-# Get comprehensive help (CLI)
-camo --help    # Windows
-./camo --help  # macOS/Linux
-
-# Get help in short form (CLI)
-camo -h        # Windows
-./camo -h      # macOS/Linux
-```
-
-Both forms display organized argument groups with descriptions, types, and examples.
-
-## System Requirements
-
-CamoTextCLI is distributed as self-contained frozen executable with all dependencies bundled:
-
-- **No Python installation required** - All dependencies included in executables
-- **No additional downloads** - NLP model bundled internally
-- **Cross-platform support** - Native executables for Windows, macOS, and Linux
-- **No environment setup** - Ready to run immediately after download
-
-```bash
-# CLI executable, always headless
-camo --input document.txt --output anonymized.txt       # Windows
-camo --input-dir ./docs --output-dir ./processed
-
-./camo --input document.txt --output anonymized.txt     # macOS/Linux
-./camo --input-dir ./docs --output-dir ./processed
-```
-
-**CLI Features:**
-
-- Batch directory processing with parallel execution
-- Scriptable automation and CI/CD integration
-- Progress reporting and error handling
-- JSON key export for audit trails
-- Entity analysis across multiple files
-- No GUI dependencies required
-
----
-
-| Aspect           | GUI Mode (camotext)            | CLI Mode (camo) |
-| ---------------- | ------------------------------ | ------------------------------------------ |
-| **Execution**    | Interactive window opens       | Runs in terminal/command prompt            |
-| **Dependencies** | Requires display/window system | Headless compatible                        |
-| **Automation**   | Manual operation               | Fully scriptable                           |
-| **Output**       | Visual interface               | STDOUT/files                               |
-| **File Size**    | Separate executable            | Separate executable                        |
-| **Server Use**   | Not suitable                   | Ideal for server environments              |
+- 
 
 ### Setting PATH
 
 
-- One PATH is set, use **camo** to invoke CLI mode (headless, scriptable) rather than having to specify the CamoTextCLI directory in a string
+- One PATH is set, use **camo** to invoke CLI mode (headless, scriptable) rather than having to specify the CamoTextCLI executable (camo.exe) location in a string
 
 *Setting PATH on Windows:*
 
@@ -128,7 +57,7 @@ source ~/.zshrc
 
 ***Option B***: Symlink into a directory that’s already on your PATH
 
-Most macOS systems already include /usr/local/bin (or /opt/homebrew/bin) in your shell’s PATH. Just create a symbolic link:
+Most macOS systems already include /usr/local/bin (or /opt/homebrew/bin) in your shell’s PATH. Just create a symbolic link:
 
 1) create /usr/local/bin if needed
 ```bash
@@ -145,56 +74,101 @@ camo --help
 
 
 
+---
+
+## Quick Start
+
+For immediate help and argument reference (CLI):
+
+```bash
+# Get comprehensive help (CLI)
+camo --help    # Windows
+./camo --help  # macOS/Linux
+
+# Get help in short form (CLI)
+camo -h        # Windows
+./camo -h      # macOS/Linux
+```
+
+## System Requirements
+
+CamoText is distributed as self-contained executables with all dependencies bundled:
+
+- **No Python installation required** - All dependencies included in executables
+- **No additional downloads** - NLP model bundled internally
+- **Cross-platform support** - Native executables for Windows, macOS, and Linux
+- **No environment setup** - Ready to run immediately after download
+
+
+### CLI Mode (camo)
+
+When launched as 'camo' or 'camo.exe', 'camotextcli', or 'camotextcli.exe', the command-line interface runs in headless
+mode:
+
+```bash
+# CLI executable, always headless
+camo --input document.txt --output anonymized.txt       # Windows
+camo --input-dir ./docs --output-dir ./processed
+
+./camo --input document.txt --output anonymized.txt     # macOS/Linux
+./camo --input-dir ./docs --output-dir ./processed
+```
+
+**CLI Features:**
+
+- Batch directory processing with parallel execution
+- Scriptable automation and CI/CD integration
+- Progress reporting and error handling
+- JSON key export for audit trails
+- Entity analysis across multiple files
+- No GUI dependencies required
+
+---
+
+| Aspect           | GUI Mode (camotext)            | CLI Mode (camo/camotextcli/camotextcli.py) |
+| ---------------- | ------------------------------ | ------------------------------------------ |
+| **Execution**    | Interactive window opens       | Runs in terminal/command prompt            |
+| **Dependencies** | Requires display/window system | Headless compatible                        |
+| **Automation**   | Manual operation               | Fully scriptable                           |
+| **Output**       | Visual interface               | STDOUT/files                               |
+| **File Size**    | Separate executable            | Separate executable                        |
+| **Server Use**   | Not suitable                   | Ideal for server environments              |
+
 
 ### Usage Examples
 
-> **Note:** Usage examples assume PATH has been set
-
+> **Note:**
+>
+> - Use `camo` or `camo.exe`for the CLI (headless, scriptable, batch, or automation
+>   workflows).
 
 ```bash
+
 # CLI mode
 camo --input file.txt --output out.txt           # Windows
-
 ./camo --input file.txt --output out.txt         # macOS/Linux
-
 ```
 
-### Getting Help
+## Command Syntax
 
-To display all available arguments, their syntax, types, and descriptions:
-
-```bash
-# Display comprehensive help
---help
--h          # Short form
-
-# Example output shows organized argument groups:
-# - Input/Output Options
-# - Anonymization Options
-# - Key Management
-# - Batch Processing Options
-# - Analysis Options
-```
 
 ### Error Handling
 
 If invalid arguments are provided, CamoText displays helpful error messages:
 
 ```bash
-# Invalid argument example
-camo --invalid-arg file.txt
 
 # Output:
 # Error: Invalid argument(s): --invalid-arg
 #
-# Supported CLI arguments: --dump-key, --extensions, --hash-length, --help, --ignore-category, --input, --input-dir, --key-dir, --list-entities, --output, --output-dir, --priority, --revert, --recursive, --workers, -h
+# Supported CLI arguments: --dump-key, --extensions, --hash-length, --help, --ignore-category, --input, --input-dir, --key-dir, --list-entities, --output, --output-dir, --priority, --redact, --revert, --recursive, --workers, -h
 #
 # Use --help or -h for detailed usage information.
 ```
 
 ### Required Arguments
 
-CamoText requires either single file input or batch processing input:
+CamoTextCLI requires either plaintext, single file input or batch processing input:
 
 | Mode             | Required Arguments               |
 | ---------------- | -------------------------------- |
@@ -223,6 +197,7 @@ All CLI arguments, organized into groups:
 | `--hash-length`      | integer | N        | 8       | Length of the anonymization hashes                                                                                                           |
 | `--ignore-category`  | string  | CATEGORY | none    | Category to ignore (revert after anonymization). Case-insensitive. Can be used multiple times. Examples: PERSON, EMAIL_ADDRESS, PHONE_NUMBER |
 | `--config`           | string  | FILE     | none    | Path to JSON configuration file containing anonymization settings                                                                            |
+| `--redact`           | flag    | -        | false   | Replace all anonymized items with "[REDACTED]" instead of hash tags                                                                        |
 
 #### Key Management
 
@@ -252,15 +227,11 @@ All CLI arguments, organized into groups:
 ```bash
 # Display comprehensive help with all arguments organized by category
 camo --help                # Windows
-
 ./camo --help              # macOS/Linux
-
 
 # Short form help
 camo -h                    # Windows
-
 ./camo -h                  # macOS/Linux
-
 
 # Example help output structure:
 # CamoText: Anonymize text from files or strings.
@@ -298,7 +269,7 @@ camo --unknown-option file.txt
 # Output:
 # Error: Invalid argument(s): --unknown-option
 #
-# Supported CLI arguments: --dump-key, --extensions, --hash-length, --help, --ignore-category, --input, --input-dir, --key-dir, --list-entities, --output, --output-dir, --priority, --revert, --recursive, --workers, -h
+# Supported CLI arguments: --dump-key, --extensions, --hash-length, --help, --ignore-category, --input, --input-dir, --key-dir, --list-entities, --output, --output-dir, --priority, --redact, --revert, --recursive, --workers, -h
 #
 # Use --help or -h for detailed usage information.
 
@@ -307,7 +278,7 @@ camo --output file.txt
 # Output:
 # Error: Invalid argument(s) provided.
 #
-# Supported CLI arguments: --dump-key, --extensions, --hash-length, --help, --ignore-category, --input, --input-dir, --key-dir, --list-entities, --output, --output-dir, --priority, --revert, --recursive, --workers, -h
+# Supported CLI arguments: --dump-key, --extensions, --hash-length, --help, --ignore-category, --input, --input-dir, --key-dir, --list-entities, --output, --output-dir, --priority, --redact, --revert, --recursive, --workers, -h
 #
 # Use --help or -h for detailed usage information.
 
@@ -321,27 +292,19 @@ camo --help
 ```bash
 # Anonymize a text file to STDOUT (using long forms)
 camo --input document.txt                               # Windows
-
 ./camo --input document.txt                             # macOS/Linux
-
 
 # Anonymize a text file to STDOUT (using short forms)
 camo -i document.txt                                    # Windows
-
 ./camo -i document.txt                                  # macOS/Linux
-
 
 # Anonymize a PDF and save to file (using long forms)
 camo --input report.pdf --output anonymized_report.pdf   # Windows
-
 ./camo --input report.pdf --output anonymized_report.pdf # macOS/Linux
-
 
 # Anonymize a PDF and save to file (using short forms)
 camo -i report.pdf -o anonymized_report.pdf              # Windows
-
 ./camo -i report.pdf -o anonymized_report.pdf            # macOS/Linux
-
 ```
 
 ### Raw Text Processing
@@ -356,6 +319,14 @@ camo --input "John Doe works at Acme Corp and can be reached at john@acme.com"
 # Process with custom hash length
 camo --input "Sensitive data here" --hash-length 12     # Windows
 ./camo --input "Sensitive data here" --hash-length 12   # macOS/Linux
+
+# Process with redaction mode
+camo --input "John Doe works at Acme Corp" --redact     # Windows
+./camo --input "John Doe works at Acme Corp" --redact   # macOS/Linux
+
+# Process with configuration file (includes exclusions)
+camo --config config.json --input document.txt          # Windows
+./camo --config config.json --input document.txt        # macOS/Linux
 ```
 
 ### Priority Text Processing
@@ -392,6 +363,51 @@ camo --input-dir ./anonymized --key-dir ./keys --revert "confidential"
 # Revert with recursive processing
 camo --input-dir ./anonymized --revert "internal" --recursive
 ```
+
+### Exclusions
+
+The `exclusions` configuration field allows you to specify text that should be excluded from anonymization and preserved in the output. This is useful when you want to keep certain terms visible while anonymizing other sensitive information.
+
+**How Exclusions Work:**
+- **Case-insensitive matching**: Exclusions are matched regardless of case
+- **Partial matching**: If any part of a detected entity contains an exclusion term, the entire entity is preserved
+- **Priority over anonymization**: Excluded text is never anonymized, even if it would normally be detected as PII
+- **Configuration-based**: Set via JSON configuration files for consistent behavior
+
+```json
+{
+  "exclusions": ["confidential", "internal use only", "proprietary", "public domain"]
+}
+```
+
+**Example:**
+- Input: "This confidential document contains John Doe's personal information"
+- Without exclusions: "This <PERSON_a1b2c3d4> document contains <PERSON_e5f6g7h8>'s personal information"
+- With exclusions: "This confidential document contains <PERSON_e5f6g7h8>'s personal information"
+
+### Redaction Mode
+
+The `--redact` option replaces all anonymized items with "[REDACTED]" instead of hash tags. This provides a cleaner, more uniform appearance while still maintaining the anonymization key for reference.
+
+```bash
+# Basic redaction (Windows)
+camo --input document.txt --redact
+
+# Redaction with file output (macOS/Linux)
+./camo --input report.pdf --output redacted_report.pdf --redact
+
+# Batch processing with redaction
+camo --input-dir ./docs --output-dir ./redacted --redact
+
+# Redaction with priority text
+camo --priority "confidential" --input document.txt --redact
+```
+
+**Key Features:**
+- **Uniform appearance**: All anonymized content appears as "[REDACTED]"
+- **Key preservation**: Anonymization keys still contain original mappings
+- **Clean output**: No hash tags visible in the final document
+- **Compatible with all modes**: Works with single file, batch, and priority processing
 
 ### Category Ignoring (Reversion)
 
@@ -433,7 +449,7 @@ camo --priority "confidential" --ignore-category "organization" --input document
 - `ACCOUNT` - Account handles and numbers
 - `UUID` - Universal unique identifiers
 - `CRYPTO_ADDRESS` - Cryptocurrency addresses
-- And more... (see the [CamoText User Guide](https://camotext.ai/assets/CamoTextUserGuide.pdf) for the complete list of data categories)
+- And more... (see main documentation for complete list)
 
 ### Key File Placement
 
@@ -558,6 +574,12 @@ camo --priority "Operation Blackbird" --priority "classified" ^
 camo --priority "confidential" --ignore-category "organization" ^
              --ignore-category "location" --input-dir ./documents ^
              --output-dir ./processed --dump-key audit.json --workers 6
+
+# Batch processing with redaction mode
+camo --input-dir ./sensitive --output-dir ./redacted --redact --workers 4
+
+# Batch processing with configuration file (includes exclusions)
+camo --config config.json --input-dir ./docs --output-dir ./processed --workers 4
 
 # Selective anonymization keeping organizations visible
 ./camo --input-dir ./compliance_docs --output-dir ./redacted \
@@ -815,74 +837,6 @@ camo \
     --ignore-category "location"
 ```
 
-#### Python Script Integration
-
-```python
-import subprocess
-import json
-import sys
-from pathlib import Path
-
-def anonymize_file(input_path, output_path=None, hash_length=8, ignore_categories=None, executable_path='camo'):
-    """Anonymize a single file using CamoText executable."""
-    cmd = [executable_path, '--input', input_path]
-
-    if output_path:
-        cmd.extend(['--output', output_path])
-
-    if hash_length != 8:
-        cmd.extend(['--hash-length', str(hash_length)])
-
-    if ignore_categories:
-        for category in ignore_categories:
-            cmd.extend(['--ignore-category', category])
-
-    result = subprocess.run(cmd, capture_output=True, text=True)
-
-    if result.returncode != 0:
-        print(f"Error: {result.stderr}", file=sys.stderr)
-        return None
-
-    return result.stdout
-
-def batch_anonymize(input_dir, output_dir, key_dir=None, workers=4, recursive=True, ignore_categories=None, executable_path='camo'):
-    """Batch anonymize directory using native batch processing."""
-    cmd = [
-        executable_path,
-        '--input-dir', input_dir,
-        '--output-dir', output_dir,
-        '--workers', str(workers)
-    ]
-
-    if key_dir:
-        cmd.extend(['--key-dir', key_dir])
-
-    if recursive:
-        cmd.append('--recursive')
-
-    if ignore_categories:
-        for category in ignore_categories:
-            cmd.extend(['--ignore-category', category])
-
-    result = subprocess.run(cmd, capture_output=True, text=True)
-
-    if result.returncode != 0:
-        print(f"Batch processing failed: {result.stderr}", file=sys.stderr)
-        return False
-
-    print(result.stdout)
-    return True
-
-# Usage examples
-# Windows: Use 'camo.exe', macOS/Linux: Use './camo'
-anonymized_content = anonymize_file('document.txt', 'anonymized.txt',
-                                   ignore_categories=['organization', 'location'],
-                                   executable_path='camo.exe')
-batch_success = batch_anonymize('./docs', './anonymized', './keys', workers=8,
-                               ignore_categories=['organization'],
-                               executable_path='camo.exe')
-```
-
 ### Performance Considerations
 
 #### File Size Limits
@@ -1035,12 +989,10 @@ batch_success, output, errors = agent.batch_process('./docs', './processed',
 
 ## License and Support
 
-CamoTextCLI is subject to the CamoText EULA. For technical support or feature requests, please refer to the main
+CamoText CLI is subject to the CamoText EULA. For technical support or feature requests, please refer to the main
 documentation or contact support channels.
 
 ---
-
-_This documentation covers CamoTextCLI version 0.1.1. For the latest updates, please check the release notes._
 
 ### Configuration File
 
@@ -1052,12 +1004,22 @@ format:
 {
   "priority": ["John Doe", "Acme Corp", "123-456-7890"],
   "hash_length": 12,
-  "ignore_category": ["PERSON", "EMAIL_ADDRESS"]
+  "ignore_category": ["PERSON", "EMAIL_ADDRESS"],
+  "redact": true,
+  "exclusions": ["confidential", "internal use only", "proprietary"]
 }
 ```
 
 All fields in the configuration file are optional. If a field is not specified, the default value or command-line
 argument will be used instead.
+
+#### Configuration Fields
+
+- **`priority`**: Array of strings that should be anonymized with priority
+- **`hash_length`**: Integer length of anonymization hashes (default: 8)
+- **`ignore_category`**: Array of entity categories to ignore (revert after anonymization)
+- **`redact`**: Boolean to replace hash tags with "[REDACTED]" (default: false)
+- **`exclusions`**: Array of text strings to exclude from anonymization (preserve in output)
 
 #### Configuration File Examples
 
@@ -1086,7 +1048,9 @@ camo --config config.json --input document.txt
     "classified information"
   ],
   "hash_length": 12,
-  "ignore_category": ["ORGANIZATION", "LOCATION", "DATE_TIME"]
+  "ignore_category": ["ORGANIZATION", "LOCATION", "DATE_TIME"],
+  "redact": false,
+  "exclusions": ["public domain", "open source", "general knowledge"]
 }
 ```
 
