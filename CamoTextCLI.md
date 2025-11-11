@@ -1,5 +1,5 @@
 # CamoText CLI Documentation
-*version 1.0.0*
+*version 1.0.1*
 
 ## Features
 
@@ -174,6 +174,7 @@ CamoTextCLI requires either plaintext, single file input or batch processing inp
 | ---------------- | -------------------------------- |
 | Single File      | `--input`                        |
 | Batch Processing | `--input-dir` AND `--output-dir` |
+| De-Anonymization | `--input-dir` AND `--deanon`    |
 
 ### Argument Reference
 
@@ -198,6 +199,7 @@ All CLI arguments, organized into groups:
 | `--ignore-category`  | string  | CATEGORY | none    | Category to ignore (revert after anonymization). Case-insensitive. Can be used multiple times. Examples: PERSON, EMAIL_ADDRESS, PHONE_NUMBER |
 | `--config`           | string  | FILE     | none    | Path to JSON configuration file containing anonymization settings                                                                            |
 | `--redact`           | flag    | -        | false   | Replace all anonymized items with "[REDACTED]" instead of hash tags                                                                        |
+| `--deanon`           | flag    | -        | false   | De-anonymize files by restoring hash tags to original text. Requires --input-dir                                                           |
 
 #### Key Management
 
@@ -587,6 +589,93 @@ camo --config config.json --input-dir ./docs --output-dir ./processed --workers 
            --recursive --workers 8
 ```
 
+### De-Anonymization
+
+The `--deanon` flag allows you to fully de-anonymize files by restoring all hash tags to their original text using anonymization key files. This is useful when you need to restore anonymized documents to their original state.
+
+**How De-Anonymization Works:**
+
+1. **Directory Scan**: Scans the input directory for JSON anonymization key files
+2. **Key Combination**: Combines all JSON key files found (skips duplicates, keeps first occurrence)
+3. **File Processing**: Processes all compatible input files (non-JSON files with supported extensions)
+4. **Hash Restoration**: Replaces all hash tags with their original text from the combined key
+5. **Output**: Saves de-anonymized files with "clean_" prefix
+
+**Key Features:**
+
+- **Automatic key discovery**: Finds and combines all JSON key files in the directory
+- **Recursive processing**: Use `--recursive` to process subdirectories
+- **Extension filtering**: Use `--extensions` to filter file types
+- **Parallel processing**: Supports `--workers` for faster execution
+- **Output flexibility**: Save to same directory (with "clean_" prefix) or specify `--output-dir`
+- **Warning system**: Warns if no key files found and asks for confirmation
+
+**Basic Usage:**
+
+```bash
+# De-anonymize files in directory (Windows)
+camo --input-dir ./anonymized --deanon
+
+# De-anonymize files (macOS/Linux)
+./camo --input-dir ./anonymized --deanon
+
+# De-anonymize with recursive processing
+camo --input-dir ./anonymized --deanon --recursive
+
+# De-anonymize with specific output directory
+camo --input-dir ./anonymized --deanon --output-dir ./cleaned
+
+# De-anonymize with parallel processing
+camo --input-dir ./anonymized --deanon --workers 4
+
+# De-anonymize specific file types only
+camo --input-dir ./anonymized --deanon --extensions .txt .pdf
+
+# De-anonymize with recursive and parallel processing
+camo --input-dir ./anonymized --deanon --recursive --workers 4
+```
+
+**Example Workflow:**
+
+```bash
+# 1. Initial anonymization
+camo --input-dir ./documents --output-dir ./anonymized --key-dir ./keys
+
+# 2. Later, fully de-anonymize all files
+camo --input-dir ./anonymized --deanon --recursive
+
+# 3. Result: All files restored with "clean_" prefix in same directory
+#    Example: document1.txt -> clean_document1.txt
+```
+
+**Output Behavior:**
+
+- **Without `--output-dir`**: Files saved in same directory with "clean_" prefix
+- **With `--output-dir`**: Files saved to output directory maintaining structure, with "clean_" prefix
+- **Recursive mode**: Maintains directory structure in output
+
+**Warning System:**
+
+If no JSON key files are detected, the tool will warn and ask for confirmation:
+
+```bash
+Warning: No anonymization key .json files detected.
+Continue anyway? (y/n): 
+```
+
+**Progress Reporting:**
+
+```bash
+# Example output during de-anonymization:
+Found 3 JSON key file(s) with 45 combined entries
+Found 12 input file(s) to process...
+
+De-anonymization complete:
+  ✓ Successful: 12
+  📁 Processed directory: ./anonymized
+  📝 Output files saved with 'clean_' prefix
+```
+
 ### Term Reversion Feature
 
 CamoText supports selective term reversion, which allows you to revert specific terms from previously anonymized files
@@ -681,6 +770,7 @@ Reversion complete:
 
 - **Redact all PII, then selectively restore specific names or organizations for reporting**
 - **Batch anonymize large datasets, then revert only certain terms for compliance**
+- **De-anonymize documents using key files**
 - **Automate anonymization and reversion in CI/CD pipelines**
 
 ### Processing Modes
@@ -1170,3 +1260,4 @@ camo --config config.json --input file.txt
 ```
 
 Supported file types: `.txt`, `.pdf`, `.docx`, `.xlsx`, `.csv`, `.rtf`
+
