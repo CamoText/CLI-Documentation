@@ -1,5 +1,5 @@
 # CamoText CLI Documentation
-*version 1.0.1*
+*version 1.1.0*
 
 ## Features
 
@@ -15,7 +15,7 @@
 - **Progress Reporting**: Real-time progress updates during batch operations
 - **Comprehensive Help**: Built-in help system with organized argument documentation
 - **Error Handling**: Clear error messages with suggestions for valid arguments
-- 
+
 
 ### Setting PATH
 
@@ -1087,12 +1087,16 @@ documentation or contact support channels.
 ### Configuration File
 
 The `--config` argument allows you to specify a JSON configuration file that contains anonymization settings. This is
-useful for maintaining consistent settings across multiple runs. The configuration file should have the following
+useful for maintaining consistent settings across multiple runs, including custom priority tags. The configuration file should have the following
 format:
 
 ```json
 {
   "priority": ["John Doe", "Acme Corp", "123-456-7890"],
+  "priority_tags": {
+    "John Doe": "PERSON",
+    "Acme Corp": "FIRM"
+  },
   "hash_length": 12,
   "ignore_category": ["PERSON", "EMAIL_ADDRESS"],
   "redact": true,
@@ -1105,7 +1109,8 @@ argument will be used instead.
 
 #### Configuration Fields
 
-- **`priority`**: Array of strings that should be anonymized with priority
+- **`priority`** or **`priorities`**: Array of strings that should be anonymized with priority (both formats supported for backwards compatibility)
+- **`priority_tags`**: Dictionary mapping priority text to custom category tags (e.g., `{"John Doe": "PERSON", "Acme Corp": "FIRM"}`). Custom tags must be letters only, 1-16 characters, and will be auto-converted to uppercase. If not specified, priorities default to "PRIORITY" tag.
 - **`hash_length`**: Integer length of anonymization hashes (default: 8)
 - **`ignore_category`**: Array of entity categories to ignore (revert after anonymization)
 - **`redact`**: Boolean to replace hash tags with "[REDACTED]" (default: false)
@@ -1118,6 +1123,10 @@ argument will be used instead.
 ```json
 {
   "priority": ["confidential", "top secret"],
+  "priority_tags": {
+    "confidential": "CLASSIFIED",
+    "top secret": "SECRET"
+  },
   "hash_length": 10
 }
 ```
@@ -1137,6 +1146,10 @@ camo --config config.json --input document.txt
     "Operation Blackbird",
     "classified information"
   ],
+  "priority_tags": {
+    "Project Aurora": "PROJECT",
+    "Operation Blackbird": "OPERATION"
+  },
   "hash_length": 12,
   "ignore_category": ["ORGANIZATION", "LOCATION", "DATE_TIME"],
   "redact": false,
@@ -1260,4 +1273,5 @@ camo --config config.json --input file.txt
 ```
 
 Supported file types: `.txt`, `.pdf`, `.docx`, `.xlsx`, `.csv`, `.rtf`
+
 
