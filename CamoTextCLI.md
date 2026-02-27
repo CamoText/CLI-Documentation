@@ -1,9 +1,9 @@
 # CamoText CLI Documentation
-*version 1.1.0*
+*version 1.2.0*
 
 ## Features
 
-- **Headless Operation**: Run without GUI dependencies (CLI only)
+- **Headless Operation**: Run headless in terminal environments (CLI only)
 - **Native Batch Processing**: Built-in directory processing with parallel execution
 - **Flexible Input**: Accept single files, raw text strings, or entire directories
 - **Multiple Output Formats**: Support for various file formats
@@ -17,60 +17,36 @@
 - **Error Handling**: Clear error messages with suggestions for valid arguments
 
 
-### Setting PATH
+## Installation and PATH
 
+### Windows installer (recommended)
 
-- One PATH is set, use **camo** to invoke CLI mode (headless, scriptable) rather than having to specify the CamoTextCLI executable (camo.exe) location in a string
+The CamoText CLI installer now includes a setup task named **"Add CamoText CLI to PATH (recommended)"**.
 
-*Setting PATH on Windows:*
+When this option is selected (default), setup automatically adds the installed CLI folder to your user PATH so you can run:
 
-1) Win+R → type sysdm.cpl → Enter.
-
-2) “Advanced” tab → Environment Variables…
-
-3) Under User variables (or System variables for all users) select Path → Edit.
-
-4) New → paste C:\full\path\to\CamoTextCLI (your folder containing camo.exe) → OK all the way out.
-
-
-
-*Setting PATH on MacOS*
-
-***Option A***: Edit your shell’s startup file. Recent macOS versions default to zsh.
-
-1) Open your shell config in a text editor. run:
 ```bash
-nano ~/.zshrc
-```
-
-2) Add this line at the bottom, replacing /full/path/to with the folder containing camo.app:
-```bash
-export PATH="/full/path/to:$PATH"
-```
-
-3) Save (Ctrl + O, Enter) and exit (Ctrl + X).
-
-4) Reload the file so you don’t have to restart Terminal:
-```bash
-source ~/.zshrc
-```
-
-***Option B***: Symlink into a directory that’s already on your PATH
-
-Most macOS systems already include /usr/local/bin (or /opt/homebrew/bin) in your shell’s PATH. Just create a symbolic link:
-
-1) create /usr/local/bin if needed
-```bash
-sudo mkdir -p /usr/local/bin
-```
-
-2) link the camo executable
-```bash
-sudo ln -s ~/Desktop/camo.app/Contents/MacOS/camo /usr/local/bin/camo
-```
-
-3) Open a new terminal and simply run:
 camo --help
+```
+
+Notes:
+- Open a **new** terminal after install so the updated PATH is loaded.
+- Uninstall removes the CamoText CLI install directory from user PATH.
+
+### macOS Homebrew formula
+
+A standalone Homebrew formula is provided at:
+
+`packaging/homebrew/camo.rb`
+
+Install flow (example local tap):
+
+```bash
+brew install --formula ./packaging/homebrew/camo.rb
+camo --help
+```
+
+If you publish the formula in a tap, users can install directly from the tap instead.
 
 
 
@@ -121,106 +97,9 @@ camo --input-dir ./docs --output-dir ./processed
 - Progress reporting and error handling
 - JSON key export for audit trails
 - Entity analysis across multiple files
-- No GUI dependencies required
+- No desktop display dependency required
 
 ---
-
-| Aspect           | GUI Mode (camotext)            | CLI Mode (camo/camotextcli/camotextcli.py) |
-| ---------------- | ------------------------------ | ------------------------------------------ |
-| **Execution**    | Interactive window opens       | Runs in terminal/command prompt            |
-| **Dependencies** | Requires display/window system | Headless compatible                        |
-| **Automation**   | Manual operation               | Fully scriptable                           |
-| **Output**       | Visual interface               | STDOUT/files                               |
-| **File Size**    | Separate executable            | Separate executable                        |
-| **Server Use**   | Not suitable                   | Ideal for server environments              |
-
-
-### Usage Examples
-
-> **Note:**
->
-> - Use `camo` or `camo.exe`for the CLI (headless, scriptable, batch, or automation
->   workflows).
-
-```bash
-
-# CLI mode
-camo --input file.txt --output out.txt           # Windows
-./camo --input file.txt --output out.txt         # macOS/Linux
-```
-
-## Command Syntax
-
-
-### Error Handling
-
-If invalid arguments are provided, CamoText displays helpful error messages:
-
-```bash
-
-# Output:
-# Error: Invalid argument(s): --invalid-arg
-#
-# Supported CLI arguments: --dump-key, --extensions, --hash-length, --help, --ignore-category, --input, --input-dir, --key-dir, --list-entities, --output, --output-dir, --priority, --redact, --revert, --recursive, --workers, -h
-#
-# Use --help or -h for detailed usage information.
-```
-
-### Required Arguments
-
-CamoTextCLI requires either plaintext, single file input or batch processing input:
-
-| Mode             | Required Arguments               |
-| ---------------- | -------------------------------- |
-| Single File      | `--input`                        |
-| Batch Processing | `--input-dir` AND `--output-dir` |
-| De-Anonymization | `--input-dir` AND `--deanon`    |
-
-### Argument Reference
-
-All CLI arguments, organized into groups:
-
-#### Input/Output Options
-
-| Argument           | Type   | Metavar | Description                                                       |
-| ------------------ | ------ | ------- | ----------------------------------------------------------------- |
-| `-i` OR `--input`  | string | FILE    | Input file path or raw text string                                |
-| `-o` OR `--output` | string | FILE    | Output file path. If omitted, prints to STDOUT                    |
-| `--input-dir`      | string | DIR     | Input directory for batch processing                              |
-| `--output-dir`     | string | DIR     | Output directory for batch processing (required with --input-dir) |
-
-#### Anonymization Options
-
-| Argument             | Type    | Metavar  | Default | Description                                                                                                                                  |
-| -------------------- | ------- | -------- | ------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
-| `-p` OR `--priority` | string  | TEXT     | none    | Text that should be anonymized with priority. Case-insensitive. Can be used multiple times                                                   |
-| `-r` OR `--revert`   | string  | TEXT     | none    | Text to revert from anonymized files. Case-insensitive. Can be used multiple times. Requires --input-dir                                     |
-| `--hash-length`      | integer | N        | 8       | Length of the anonymization hashes                                                                                                           |
-| `--ignore-category`  | string  | CATEGORY | none    | Category to ignore (revert after anonymization). Case-insensitive. Can be used multiple times. Examples: PERSON, EMAIL_ADDRESS, PHONE_NUMBER |
-| `--config`           | string  | FILE     | none    | Path to JSON configuration file containing anonymization settings                                                                            |
-| `--redact`           | flag    | -        | false   | Replace all anonymized items with "[REDACTED]" instead of hash tags                                                                        |
-| `--deanon`           | flag    | -        | false   | De-anonymize files by restoring hash tags to original text. Requires --input-dir                                                           |
-
-#### Key Management
-
-| Argument     | Type   | Metavar | Description                                                                                                       |
-| ------------ | ------ | ------- | ----------------------------------------------------------------------------------------------------------------- |
-| `--dump-key` | string | FILE    | Path to write the anonymization key as a JSON file. If no value provided, uses default naming in output directory |
-| `--key-dir`  | string | DIR     | Directory to save anonymization keys during batch processing. If no value provided, uses output directory         |
-
-#### Batch Processing Options
-
-| Argument       | Type    | Metavar | Default                         | Description                                                |
-| -------------- | ------- | ------- | ------------------------------- | ---------------------------------------------------------- |
-| `--recursive`  | flag    | -       | false                           | Process subdirectories recursively during batch processing |
-| `--extensions` | list    | EXT     | .txt .pdf .docx .xlsx .csv .rtf | File extensions to process                                 |
-| `--workers`    | integer | N       | 1                               | Number of parallel workers for batch processing            |
-
-#### Analysis Options
-
-| Argument          | Type | Metavar | Description                                                      |
-| ----------------- | ---- | ------- | ---------------------------------------------------------------- |
-| `--list-entities` | flag | -       | List detected entity types and exit (no anonymization performed) |
 
 ## Usage Examples
 
@@ -249,6 +128,9 @@ camo -h                    # Windows
 #   --revert TEXT           Text to revert from anonymized files
 #   --hash-length N         Length of the anonymization hashes (default: 8)
 #   --ignore-category CAT   Category to ignore (revert after anonymization)
+#   --preserve-docx-formatting Preserve DOCX formatting during DOCX processing
+#   --docx-track-changes {accept,reject} Handle DOCX tracked changes before processing
+#   --preserve-xlsx-formatting Preserve XLSX formatting during XLSX processing
 #
 # Key Management:
 #   --dump-key [FILE]       Path to write the anonymization key as a JSON file
@@ -271,7 +153,7 @@ camo --unknown-option file.txt
 # Output:
 # Error: Invalid argument(s): --unknown-option
 #
-# Supported CLI arguments: --dump-key, --extensions, --hash-length, --help, --ignore-category, --input, --input-dir, --key-dir, --list-entities, --output, --output-dir, --priority, --redact, --revert, --recursive, --workers, -h
+# Supported CLI arguments: --dump-key, --extensions, --hash-length, --help, --ignore-category, --input, --input-dir, --key-dir, --list-entities, --output, --output-dir, --priority, --preserve-docx-formatting, --preserve-xlsx-formatting, --docx-track-changes, --redact, --revert, --recursive, --workers, --deanon, -h
 #
 # Use --help or -h for detailed usage information.
 
@@ -280,7 +162,7 @@ camo --output file.txt
 # Output:
 # Error: Invalid argument(s) provided.
 #
-# Supported CLI arguments: --dump-key, --extensions, --hash-length, --help, --ignore-category, --input, --input-dir, --key-dir, --list-entities, --output, --output-dir, --priority, --redact, --revert, --recursive, --workers, -h
+# Supported CLI arguments: --dump-key, --extensions, --hash-length, --help, --ignore-category, --input, --input-dir, --key-dir, --list-entities, --output, --output-dir, --priority, --preserve-docx-formatting, --preserve-xlsx-formatting, --docx-track-changes, --redact, --revert, --recursive, --workers, --deanon, -h
 #
 # Use --help or -h for detailed usage information.
 
@@ -308,6 +190,29 @@ camo --input report.pdf --output anonymized_report.pdf   # Windows
 camo -i report.pdf -o anonymized_report.pdf              # Windows
 ./camo -i report.pdf -o anonymized_report.pdf            # macOS/Linux
 ```
+
+### DOCX and XLSX Formatting Preservation
+
+Use these options when input and output are the same Office file type and you want layout/formatting preserved.
+
+```bash
+# DOCX preserve formatting (accept tracked changes first)
+camo --input report.docx --output anonymized_report.docx --preserve-docx-formatting
+
+# DOCX preserve formatting (reject tracked changes first)
+camo --input report.docx --output anonymized_report.docx --preserve-docx-formatting --docx-track-changes reject
+
+# XLSX preserve formatting
+camo --input workbook.xlsx --output anonymized_workbook.xlsx --preserve-xlsx-formatting
+
+# Batch DOCX/XLSX preserve formatting
+camo --input-dir ./docs --output-dir ./anonymized --preserve-docx-formatting --preserve-xlsx-formatting
+```
+
+Notes:
+- `--preserve-docx-formatting` is applied only when both input and output are `.docx`.
+- `--preserve-xlsx-formatting` is applied only when both input and output are `.xlsx`.
+- `--docx-track-changes` accepts `accept` (default) or `reject`.
 
 ### Raw Text Processing
 
@@ -608,6 +513,7 @@ The `--deanon` flag allows you to fully de-anonymize files by restoring all hash
 - **Extension filtering**: Use `--extensions` to filter file types
 - **Parallel processing**: Supports `--workers` for faster execution
 - **Output flexibility**: Save to same directory (with "clean_" prefix) or specify `--output-dir`
+- **DOCX/XLSX formatting preservation**: `.docx` and `.xlsx` de-anonymization paths preserve document/workbook formatting and structure
 - **Warning system**: Warns if no key files found and asks for confirmation
 
 **Basic Usage:**
@@ -945,7 +851,7 @@ CamoText is well-suited for AI agents and local bots due to its executable-based
 
 ##### ✅ **Perfect CLI Interface**
 
-- **No GUI dependencies** - Runs headless in any environment
+- **No desktop display dependency** - Runs headless in any environment
 - **Structured input/output** - Predictable command syntax and responses
 - **Standard exit codes** - Proper success/failure signaling
 - **JSON output** - Machine-readable entity lists and anonymization keys
@@ -1099,6 +1005,9 @@ format:
   },
   "hash_length": 12,
   "ignore_category": ["PERSON", "EMAIL_ADDRESS"],
+  "preserve_docx_formatting": true,
+  "docx_track_changes": "accept",
+  "preserve_xlsx_formatting": true,
   "redact": true,
   "exclusions": ["confidential", "internal use only", "proprietary"]
 }
@@ -1114,6 +1023,9 @@ argument will be used instead.
 - **`hash_length`**: Integer length of anonymization hashes (default: 8)
 - **`ignore_category`**: Array of entity categories to ignore (revert after anonymization)
 - **`redact`**: Boolean to replace hash tags with "[REDACTED]" (default: false)
+- **`preserve_docx_formatting`**: Boolean to preserve DOCX formatting for `.docx` input/output
+- **`docx_track_changes`**: String, either `accept` or `reject` (default: `accept`)
+- **`preserve_xlsx_formatting`**: Boolean to preserve XLSX formatting for `.xlsx` input/output
 - **`exclusions`**: Array of text strings to exclude from anonymization (preserve in output)
 
 #### Configuration File Examples
@@ -1273,5 +1185,7 @@ camo --config config.json --input file.txt
 ```
 
 Supported file types: `.txt`, `.pdf`, `.docx`, `.xlsx`, `.csv`, `.rtf`
+
+
 
 
