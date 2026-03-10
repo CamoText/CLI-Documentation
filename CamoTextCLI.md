@@ -33,22 +33,26 @@ Notes:
 - Open a **new** terminal after install so the updated PATH is loaded.
 - Uninstall removes the CamoText CLI install directory from user PATH.
 
-### macOS Homebrew formula
+### macOS 
 
-A standalone Homebrew formula is provided at:
-
-`packaging/homebrew/camo.rb`
-
-Install flow (example local tap):
+First time install:
 
 ```bash
-brew install --formula ./packaging/homebrew/camo.rb
+sudo ln -s "/Applications/CamoTextCLI-universal2.app/Contents/MacOS/CamoText" /usr/local/bin/camo
 camo --help
 ```
 
-If you publish the formula in a tap, users can install directly from the tap instead.
+If you previously installed an older CamoText CLI version on your Mac, run:
 
+```bash
+sudo rm -f /usr/local/bin/camo
+sudo ln -s "/Applications/CamoTextCLI-universal2.app/Contents/MacOS/CamoText" /usr/local/bin/camo
+```
 
+Then open a new Terminal window and run:
+```bash
+camo --help
+```
 
 ---
 
@@ -1185,6 +1189,7 @@ camo --config config.json --input file.txt
 ```
 
 Supported file types: `.txt`, `.pdf`, `.docx`, `.xlsx`, `.csv`, `.rtf`
+
 
 
 
