@@ -29,7 +29,8 @@ param(
 
     [string]$Column,
 
-    [Nullable[int]]$Row,
+    [AllowNull()]
+    [object]$Row = $null,
 
     [string]$JoinDelimiter = ", ",
 
@@ -174,14 +175,25 @@ function Resolve-WorkbookFromInputPath {
 function Resolve-ScopeSelection {
     param(
         [string]$ColumnToken,
-        [Nullable[int]]$RowNumber
+        [AllowNull()]
+        [object]$RowNumber,
+        [bool]$RowProvided = $false
     )
 
-    if (-not [string]::IsNullOrWhiteSpace($ColumnToken) -and $RowNumber.HasValue) {
+    $hasRowNumber = $RowProvided
+
+    if ($hasRowNumber -and ($RowNumber -isnot [int])) {
+        if ("$RowNumber" -notmatch "^\d+$") {
+            throw "Row index must be a whole number >= 1."
+        }
+        $RowNumber = [int]"$RowNumber"
+    }
+
+    if (-not [string]::IsNullOrWhiteSpace($ColumnToken) -and $hasRowNumber) {
         throw "Specify only one scope selector: -Column OR -Row."
     }
 
-    if ([string]::IsNullOrWhiteSpace($ColumnToken) -and (-not $RowNumber.HasValue)) {
+    if ([string]::IsNullOrWhiteSpace($ColumnToken) -and (-not $hasRowNumber)) {
         if (-not [Environment]::UserInteractive) {
             throw "Specify either -Column or -Row when running non-interactively."
         }
@@ -196,13 +208,14 @@ function Resolve-ScopeSelection {
                 throw "Invalid row number."
             }
             $RowNumber = [int]$rowInput
+            $hasRowNumber = $true
         }
         else {
             throw "Invalid selection. Enter C or R."
         }
     }
 
-    if ($RowNumber.HasValue -and $RowNumber.Value -lt 1) {
+    if ($hasRowNumber -and $RowNumber -lt 1) {
         throw "Row index must be >= 1."
     }
 
@@ -217,7 +230,7 @@ function Resolve-ScopeSelection {
     return @{
         Mode = "Row"
         ColumnToken = $null
-        RowNumber = $RowNumber.Value
+        RowNumber = $RowNumber
     }
 }
 
@@ -346,7 +359,7 @@ try {
     }
 
     $resolvedInputPath = Resolve-WorkbookFromInputPath -ProvidedPath $InputPath
-    $scope = Resolve-ScopeSelection -ColumnToken $Column -RowNumber $Row
+    $scope = Resolve-ScopeSelection -ColumnToken $Column -RowNumber $Row -RowProvided $PSBoundParameters.ContainsKey('Row')
     $resolvedCamoPath = Resolve-CamoExecutable -ExeOrCommand $CamoPath
 
     $inputDir = [System.IO.Path]::GetDirectoryName($resolvedInputPath)
@@ -400,7 +413,7 @@ try {
                 continue
             }
 
-            $targetCells.Add([PSCustomObject]@{
+            $targetCells.Add([ordered]@{
                 Row = $r
                 Column = $columnIndex
                 OriginalValue = [string]$value
@@ -424,7 +437,7 @@ try {
                 continue
             }
 
-            $targetCells.Add([PSCustomObject]@{
+            $targetCells.Add([ordered]@{
                 Row = $targetRow
                 Column = $c
                 OriginalValue = [string]$value
@@ -445,11 +458,11 @@ try {
         $keyMap = Read-KeyMap -KeyPath $keyFilePath
 
         for ($i = 0; $i -lt $targetCells.Count; $i++) {
-            $targetCells[$i].AnonymizedValue = Apply-KeyMapToText -Text $targetCells[$i].OriginalValue -KeyMap $keyMap
+            $targetCells[$i]["AnonymizedValue"] = Apply-KeyMapToText -Text $targetCells[$i]["OriginalValue"] -KeyMap $keyMap
         }
 
         foreach ($entry in $targetCells) {
-            $worksheet.Cells.Item($entry.Row, $entry.Column).Value2 = $entry.AnonymizedValue
+            $worksheet.Cells.Item($entry["Row"], $entry["Column"]).Value2 = $entry["AnonymizedValue"]
         }
     }
 
@@ -467,7 +480,7 @@ try {
 }
 catch {
     Write-Host ("ERROR: {0}" -f $_.Exception.Message) -ForegroundColor Red
-    Write-Host "Tip: Example usage -> .\camotext_excel_scope_example.ps1 -InputPath 'C:\data\file.xlsx' -Column C" -ForegroundColor Yellow
+    Write-Host "Tip: Example usage -> .\testExcelScript.ps1 -InputPath 'C:\data\file.xlsx' -Column C" -ForegroundColor Yellow
     Write-Host "Tip: You can also use -InputXlsx, environment vars, ~, relative paths, or a folder path containing .xlsx files." -ForegroundColor Yellow
     Pause-OnError
     exit 1
