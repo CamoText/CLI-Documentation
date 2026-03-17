@@ -66,18 +66,20 @@ function ConvertTo-ColumnIndex {
     return $sum
 }
 
-function Invoke-CamoText {
+function Invoke-CamoBatchText {
     param(
         [Parameter(Mandatory = $true)][string]$Text,
-        [Parameter(Mandatory = $true)][string]$ExePath
+        [Parameter(Mandatory = $true)][string]$ExePath,
+        [Parameter(Mandatory = $true)][string]$KeyPath
     )
 
     $tmpInput = [System.IO.Path]::GetTempFileName()
     $tmpOutput = [System.IO.Path]::GetTempFileName()
 
     try {
-        Set-Content -Path $tmpInput -Value $Text -Encoding UTF8
-        $args = @("--input", $tmpInput, "--output", $tmpOutput)
+        $utf8NoBom = New-Object System.Text.UTF8Encoding($false)
+        [System.IO.File]::WriteAllText($tmpInput, $Text, $utf8NoBom)
+        $args = @("--input", $tmpInput, "--output", $tmpOutput, "--dump-key", $KeyPath)
 
         $cliOutput = & $ExePath @args 2>&1
         $exitCode = $LASTEXITCODE
@@ -91,6 +93,35 @@ function Invoke-CamoText {
         Remove-Item -Path $tmpInput -ErrorAction SilentlyContinue
         Remove-Item -Path $tmpOutput -ErrorAction SilentlyContinue
     }
+}
+
+function ConvertTo-KeyMap {
+    param([Parameter(Mandatory = $true)][string]$KeyPath)
+
+    if (-not (Test-Path -LiteralPath $KeyPath -PathType Leaf)) {
+        throw "Expected key file was not created: $KeyPath"
+    }
+
+    $jsonObject = Get-Content -LiteralPath $KeyPath -Raw -Encoding UTF8 | ConvertFrom-Json
+    $map = @{}
+    foreach ($prop in $jsonObject.PSObject.Properties) {
+        $map[$prop.Name] = [string]$prop.Value
+    }
+    return $map
+}
+
+function Apply-KeyMapToText {
+    param(
+        [Parameter(Mandatory = $true)][string]$Text,
+        [Parameter(Mandatory = $true)][hashtable]$KeyMap
+    )
+
+    $result = $Text
+    foreach ($original in ($KeyMap.Keys | Sort-Object { $_.Length } -Descending)) {
+        $replacement = [string]$KeyMap[$original]
+        $result = $result.Replace($original, $replacement)
+    }
+    return $result
 }
 
 if (-not (Test-Path -LiteralPath $InputXlsx -PathType Leaf)) {
@@ -132,6 +163,7 @@ $workbook = $null
 $worksheet = $null
 $processedCells = 0
 $skippedNonTextCells = 0
+$keyFilePath = $null
 
 try {
     $excel = New-Object -ComObject Excel.Application
@@ -150,6 +182,8 @@ try {
         throw "Unable to select worksheet."
     }
 
+    $targetCells = New-Object System.Collections.Generic.List[object]
+
     if (-not [string]::IsNullOrWhiteSpace($Column)) {
         $columnIndex = ConvertTo-ColumnIndex -ColumnToken $Column
         $startRow = [int]$worksheet.UsedRange.Row
@@ -166,8 +200,12 @@ try {
                 continue
             }
 
-            $cell.Value2 = (Invoke-CamoText -Text $value -ExePath $CamoPath)
-            $processedCells++
+            $targetCells.Add([PSCustomObject]@{
+                Row = $r
+                Column = $columnIndex
+                OriginalValue = [string]$value
+                AnonymizedValue = $null
+            }) | Out-Null
         }
     }
     else {
@@ -186,11 +224,47 @@ try {
                 continue
             }
 
-            $cell.Value2 = (Invoke-CamoText -Text $value -ExePath $CamoPath)
-            $processedCells++
+            $targetCells.Add([PSCustomObject]@{
+                Row = $targetRow
+                Column = $c
+                OriginalValue = [string]$value
+                AnonymizedValue = $null
+            }) | Out-Null
         }
     }
 
+    if ($targetCells.Count -gt 0) {
+        # Optimal separator for reliable splitting: unlikely to appear in regular worksheet text.
+        $separator = " <<CAMOTEXT_CELL_SPLIT_{0}>> " -f ([guid]::NewGuid().ToString("N"))
+        $joinedSourceText = [string]::Join($separator, ($targetCells | ForEach-Object { $_.OriginalValue }))
+
+        $inputDir = [System.IO.Path]::GetDirectoryName($resolvedInputPath)
+        $baseName = [System.IO.Path]::GetFileNameWithoutExtension($resolvedInputPath)
+        $scopeLabel = if (-not [string]::IsNullOrWhiteSpace($Column)) { "column_{0}" -f $Column } else { "row_{0}" -f $Row }
+        $keyFilePath = Join-Path -Path $inputDir -ChildPath ("{0}_{1}_key.json" -f $baseName, $scopeLabel)
+
+        $joinedAnonymizedText = Invoke-CamoBatchText -Text $joinedSourceText -ExePath $CamoPath -KeyPath $keyFilePath
+        $splitAnonymizedValues = [Regex]::Split($joinedAnonymizedText, [Regex]::Escape($separator))
+
+        if ($splitAnonymizedValues.Count -eq $targetCells.Count) {
+            for ($i = 0; $i -lt $targetCells.Count; $i++) {
+                $targetCells[$i].AnonymizedValue = $splitAnonymizedValues[$i]
+            }
+        }
+        else {
+            # Fallback: use key mapping to transform each cell if separator-based split does not round-trip.
+            $keyMap = ConvertTo-KeyMap -KeyPath $keyFilePath
+            for ($i = 0; $i -lt $targetCells.Count; $i++) {
+                $targetCells[$i].AnonymizedValue = Apply-KeyMapToText -Text $targetCells[$i].OriginalValue -KeyMap $keyMap
+            }
+        }
+
+        foreach ($entry in $targetCells) {
+            $worksheet.Cells.Item($entry.Row, $entry.Column).Value2 = $entry.AnonymizedValue
+        }
+    }
+
+    $processedCells = $targetCells.Count
     $workbook.Save()
 }
 finally {
@@ -215,3 +289,6 @@ if ($skippedNonTextCells -gt 0) {
     Write-Host "Skipped non-text cells: $skippedNonTextCells"
 }
 Write-Host "Output file: $outputXlsx"
+if ($keyFilePath) {
+    Write-Host "Anonymization key file: $keyFilePath"
+}
