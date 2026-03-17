@@ -5,9 +5,10 @@ WITHOUT THOROUGH TESTING FOR YOUR IMPLEMENTATION
 camotext_excel_scope_example.ps1
 
 Example native PowerShell integration for CamoTextCLI:
-- Accepts an input .xlsx file path
+- Accepts an input .xlsx file path OR folder containing .xlsx files
 - Anonymizes one selected column OR one selected row (not the entire workbook)
 - Saves output to a user-provided folder, or creates a new folder on Desktop by default
+- Saves the anonymization key to the input workbook directory
 
 Requirements:
 - Windows PowerShell 5.1+ or PowerShell 7+
@@ -17,8 +18,9 @@ Requirements:
 
 [CmdletBinding()]
 param(
-    [Parameter(Mandatory = $true)]
-    [string]$InputXlsx,
+    [Parameter(Position = 0)]
+    [Alias("InputXlsx")]
+    [string]$InputPath,
 
     [string]$OutputFolder,
 
@@ -26,9 +28,13 @@ param(
 
     [string]$Column,
 
-    [int]$Row,
+    [Nullable[int]]$Row,
 
-    [string]$CamoPath = "camo"
+    [string]$JoinDelimiter = ", ",
+
+    [string]$CamoPath = "camo",
+
+    [switch]$NoPauseOnError
 )
 
 Set-StrictMode -Version Latest
@@ -42,6 +48,131 @@ function Resolve-DefaultOutputFolder {
 
     $folderName = "CamoTextCLI_Excel_Anonymized_{0}" -f (Get-Date -Format "yyyyMMdd_HHmmss")
     return (Join-Path -Path $desktopPath -ChildPath $folderName)
+}
+
+function Pause-OnError {
+    if ($NoPauseOnError) {
+        return
+    }
+    if (-not [Environment]::UserInteractive) {
+        return
+    }
+
+    try {
+        [void](Read-Host "Press Enter to exit")
+    }
+    catch {
+        # Ignore prompt errors in non-standard hosts.
+    }
+}
+
+function Resolve-WorkbookFromInputPath {
+    param([Parameter(Mandatory = $true)][string]$ProvidedPath)
+
+    $trimmed = $ProvidedPath.Trim().Trim('"')
+    if (-not (Test-Path -LiteralPath $trimmed)) {
+        throw "Input path was not found: $trimmed"
+    }
+
+    if (Test-Path -LiteralPath $trimmed -PathType Leaf) {
+        $resolvedFile = (Resolve-Path -LiteralPath $trimmed).Path
+        $ext = [System.IO.Path]::GetExtension($resolvedFile)
+        if ($ext.ToLowerInvariant() -ne ".xlsx") {
+            throw "Input file must be .xlsx. Received: $ext"
+        }
+        return $resolvedFile
+    }
+
+    $xlsxFiles = Get-ChildItem -LiteralPath $trimmed -File -Filter "*.xlsx" | Sort-Object Name
+    if ($xlsxFiles.Count -eq 0) {
+        throw "No .xlsx files found in directory: $trimmed"
+    }
+    if ($xlsxFiles.Count -eq 1) {
+        return $xlsxFiles[0].FullName
+    }
+    if (-not [Environment]::UserInteractive) {
+        throw "Multiple .xlsx files found in '$trimmed'. Provide a specific file path when running non-interactively."
+    }
+
+    Write-Host "Multiple .xlsx files found in '$trimmed'. Choose one:"
+    for ($i = 0; $i -lt $xlsxFiles.Count; $i++) {
+        Write-Host ("  [{0}] {1}" -f ($i + 1), $xlsxFiles[$i].Name)
+    }
+
+    $selection = Read-Host "Enter file number"
+    if ($selection -notmatch "^\d+$") {
+        throw "Invalid selection. Expected a number."
+    }
+    $index = [int]$selection
+    if ($index -lt 1 -or $index -gt $xlsxFiles.Count) {
+        throw "Selection out of range."
+    }
+    return $xlsxFiles[$index - 1].FullName
+}
+
+function Resolve-ScopeSelection {
+    param(
+        [string]$ColumnToken,
+        [Nullable[int]]$RowNumber
+    )
+
+    if (-not [string]::IsNullOrWhiteSpace($ColumnToken) -and $RowNumber.HasValue) {
+        throw "Specify only one scope selector: -Column OR -Row."
+    }
+
+    if ([string]::IsNullOrWhiteSpace($ColumnToken) -and (-not $RowNumber.HasValue)) {
+        if (-not [Environment]::UserInteractive) {
+            throw "Specify either -Column or -Row when running non-interactively."
+        }
+
+        $choice = (Read-Host "Anonymize a Column or Row? Enter C or R").Trim().ToUpperInvariant()
+        if ($choice -eq "C") {
+            $ColumnToken = Read-Host "Enter column (e.g., A, C, AA, or 3)"
+        }
+        elseif ($choice -eq "R") {
+            $rowInput = Read-Host "Enter 1-based row number"
+            if ($rowInput -notmatch "^\d+$") {
+                throw "Invalid row number."
+            }
+            $RowNumber = [int]$rowInput
+        }
+        else {
+            throw "Invalid selection. Enter C or R."
+        }
+    }
+
+    if ($RowNumber.HasValue -and $RowNumber.Value -lt 1) {
+        throw "Row index must be >= 1."
+    }
+
+    if (-not [string]::IsNullOrWhiteSpace($ColumnToken)) {
+        return @{
+            Mode = "Column"
+            ColumnToken = $ColumnToken.Trim()
+            RowNumber = $null
+        }
+    }
+
+    return @{
+        Mode = "Row"
+        ColumnToken = $null
+        RowNumber = $RowNumber.Value
+    }
+}
+
+function Resolve-CamoExecutable {
+    param([Parameter(Mandatory = $true)][string]$ExeOrCommand)
+
+    $cmd = Get-Command -Name $ExeOrCommand -ErrorAction SilentlyContinue
+    if ($cmd) {
+        return $cmd.Source
+    }
+
+    if (Test-Path -LiteralPath $ExeOrCommand -PathType Leaf) {
+        return (Resolve-Path -LiteralPath $ExeOrCommand).Path
+    }
+
+    throw "Unable to locate CamoTextCLI ('$ExeOrCommand'). Add 'camo' to PATH or pass -CamoPath with a full executable path."
 }
 
 function ConvertTo-ColumnIndex {
@@ -95,7 +226,7 @@ function Invoke-CamoBatchText {
     }
 }
 
-function ConvertTo-KeyMap {
+function Read-KeyMap {
     param([Parameter(Mandatory = $true)][string]$KeyPath)
 
     if (-not (Test-Path -LiteralPath $KeyPath -PathType Leaf)) {
@@ -124,48 +255,48 @@ function Apply-KeyMapToText {
     return $result
 }
 
-if (-not (Test-Path -LiteralPath $InputXlsx -PathType Leaf)) {
-    throw "Input XLSX file was not found: $InputXlsx"
-}
-
-$inputExtension = [System.IO.Path]::GetExtension($InputXlsx)
-if ($inputExtension -ne ".xlsx") {
-    throw "Input file must be .xlsx. Received: $inputExtension"
-}
-
-if ([string]::IsNullOrWhiteSpace($Column) -and ($PSBoundParameters.ContainsKey("Row") -eq $false)) {
-    throw "Specify either -Column or -Row."
-}
-
-if (-not [string]::IsNullOrWhiteSpace($Column) -and $PSBoundParameters.ContainsKey("Row")) {
-    throw "Specify only one scope selector: -Column OR -Row."
-}
-
-if ($PSBoundParameters.ContainsKey("Row") -and $Row -lt 1) {
-    throw "Row index must be >= 1."
-}
-
-if ([string]::IsNullOrWhiteSpace($OutputFolder)) {
-    $OutputFolder = Resolve-DefaultOutputFolder
-}
-
-if (-not (Test-Path -LiteralPath $OutputFolder)) {
-    New-Item -Path $OutputFolder -ItemType Directory -Force | Out-Null
-}
-
-$resolvedInputPath = (Resolve-Path -LiteralPath $InputXlsx).Path
-$outputFileName = "anonymized_{0}" -f [System.IO.Path]::GetFileName($resolvedInputPath)
-$outputXlsx = Join-Path -Path $OutputFolder -ChildPath $outputFileName
-Copy-Item -LiteralPath $resolvedInputPath -Destination $outputXlsx -Force
-
 $excel = $null
 $workbook = $null
 $worksheet = $null
 $processedCells = 0
 $skippedNonTextCells = 0
 $keyFilePath = $null
+$resolvedInputPath = $null
+$outputXlsx = $null
 
 try {
+    if ([string]::IsNullOrWhiteSpace($InputPath)) {
+        if (-not [Environment]::UserInteractive) {
+            throw "Provide -InputPath (or -InputXlsx) when running non-interactively."
+        }
+        $InputPath = Read-Host "Enter input .xlsx path or folder containing .xlsx files"
+    }
+
+    if ([string]::IsNullOrWhiteSpace($JoinDelimiter)) {
+        throw "JoinDelimiter cannot be empty."
+    }
+
+    $resolvedInputPath = Resolve-WorkbookFromInputPath -ProvidedPath $InputPath
+    $scope = Resolve-ScopeSelection -ColumnToken $Column -RowNumber $Row
+    $resolvedCamoPath = Resolve-CamoExecutable -ExeOrCommand $CamoPath
+
+    $inputDir = [System.IO.Path]::GetDirectoryName($resolvedInputPath)
+    if ([string]::IsNullOrWhiteSpace($OutputFolder)) {
+        $OutputFolder = Resolve-DefaultOutputFolder
+    }
+    if (-not (Test-Path -LiteralPath $OutputFolder)) {
+        New-Item -Path $OutputFolder -ItemType Directory -Force | Out-Null
+    }
+
+    $resolvedOutputFolder = (Resolve-Path -LiteralPath $OutputFolder).Path
+    if ($resolvedOutputFolder -eq $inputDir) {
+        throw "OutputFolder cannot equal the input file directory, because key files are saved to the input directory."
+    }
+
+    $outputFileName = "anonymized_{0}" -f [System.IO.Path]::GetFileName($resolvedInputPath)
+    $outputXlsx = Join-Path -Path $resolvedOutputFolder -ChildPath $outputFileName
+    Copy-Item -LiteralPath $resolvedInputPath -Destination $outputXlsx -Force
+
     $excel = New-Object -ComObject Excel.Application
     $excel.Visible = $false
     $excel.DisplayAlerts = $false
@@ -184,8 +315,8 @@ try {
 
     $targetCells = New-Object System.Collections.Generic.List[object]
 
-    if (-not [string]::IsNullOrWhiteSpace($Column)) {
-        $columnIndex = ConvertTo-ColumnIndex -ColumnToken $Column
+    if ($scope.Mode -eq "Column") {
+        $columnIndex = ConvertTo-ColumnIndex -ColumnToken $scope.ColumnToken
         $startRow = [int]$worksheet.UsedRange.Row
         $endRow = $startRow + [int]$worksheet.UsedRange.Rows.Count - 1
 
@@ -209,7 +340,7 @@ try {
         }
     }
     else {
-        $targetRow = $Row
+        $targetRow = $scope.RowNumber
         $startColumn = [int]$worksheet.UsedRange.Column
         $endColumn = $startColumn + [int]$worksheet.UsedRange.Columns.Count - 1
 
@@ -234,29 +365,18 @@ try {
     }
 
     if ($targetCells.Count -gt 0) {
-        # Optimal separator for reliable splitting: unlikely to appear in regular worksheet text.
-        $separator = " <<CAMOTEXT_CELL_SPLIT_{0}>> " -f ([guid]::NewGuid().ToString("N"))
-        $joinedSourceText = [string]::Join($separator, ($targetCells | ForEach-Object { $_.OriginalValue }))
+        $joinedSourceText = [string]::Join($JoinDelimiter, ($targetCells | ForEach-Object { $_.OriginalValue }))
 
-        $inputDir = [System.IO.Path]::GetDirectoryName($resolvedInputPath)
         $baseName = [System.IO.Path]::GetFileNameWithoutExtension($resolvedInputPath)
-        $scopeLabel = if (-not [string]::IsNullOrWhiteSpace($Column)) { "column_{0}" -f $Column } else { "row_{0}" -f $Row }
-        $keyFilePath = Join-Path -Path $inputDir -ChildPath ("{0}_{1}_key.json" -f $baseName, $scopeLabel)
+        $scopeLabel = if ($scope.Mode -eq "Column") { "column_{0}" -f $scope.ColumnToken } else { "row_{0}" -f $scope.RowNumber }
+        $timestamp = Get-Date -Format "yyyyMMdd_HHmmss"
+        $keyFilePath = Join-Path -Path $inputDir -ChildPath ("{0}_{1}_{2}_key.json" -f $baseName, $scopeLabel, $timestamp)
 
-        $joinedAnonymizedText = Invoke-CamoBatchText -Text $joinedSourceText -ExePath $CamoPath -KeyPath $keyFilePath
-        $splitAnonymizedValues = [Regex]::Split($joinedAnonymizedText, [Regex]::Escape($separator))
+        [void](Invoke-CamoBatchText -Text $joinedSourceText -ExePath $resolvedCamoPath -KeyPath $keyFilePath)
+        $keyMap = Read-KeyMap -KeyPath $keyFilePath
 
-        if ($splitAnonymizedValues.Count -eq $targetCells.Count) {
-            for ($i = 0; $i -lt $targetCells.Count; $i++) {
-                $targetCells[$i].AnonymizedValue = $splitAnonymizedValues[$i]
-            }
-        }
-        else {
-            # Fallback: use key mapping to transform each cell if separator-based split does not round-trip.
-            $keyMap = ConvertTo-KeyMap -KeyPath $keyFilePath
-            for ($i = 0; $i -lt $targetCells.Count; $i++) {
-                $targetCells[$i].AnonymizedValue = Apply-KeyMapToText -Text $targetCells[$i].OriginalValue -KeyMap $keyMap
-            }
+        for ($i = 0; $i -lt $targetCells.Count; $i++) {
+            $targetCells[$i].AnonymizedValue = Apply-KeyMapToText -Text $targetCells[$i].OriginalValue -KeyMap $keyMap
         }
 
         foreach ($entry in $targetCells) {
@@ -266,6 +386,21 @@ try {
 
     $processedCells = $targetCells.Count
     $workbook.Save()
+
+    Write-Host "Completed. Processed text cells: $processedCells"
+    if ($skippedNonTextCells -gt 0) {
+        Write-Host "Skipped non-text cells: $skippedNonTextCells"
+    }
+    Write-Host "Output file: $outputXlsx"
+    if ($keyFilePath) {
+        Write-Host "Anonymization key file: $keyFilePath"
+    }
+}
+catch {
+    Write-Host ("ERROR: {0}" -f $_.Exception.Message) -ForegroundColor Red
+    Write-Host "Tip: Example usage -> .\camotext_excel_scope_example.ps1 -InputPath 'C:\data\file.xlsx' -Column C" -ForegroundColor Yellow
+    Pause-OnError
+    exit 1
 }
 finally {
     if ($workbook) {
@@ -282,13 +417,4 @@ finally {
 
     [GC]::Collect()
     [GC]::WaitForPendingFinalizers()
-}
-
-Write-Host "Completed. Processed text cells: $processedCells"
-if ($skippedNonTextCells -gt 0) {
-    Write-Host "Skipped non-text cells: $skippedNonTextCells"
-}
-Write-Host "Output file: $outputXlsx"
-if ($keyFilePath) {
-    Write-Host "Anonymization key file: $keyFilePath"
 }
