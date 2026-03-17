@@ -19,8 +19,9 @@ Requirements:
 [CmdletBinding()]
 param(
     [Parameter(Position = 0)]
-    [Alias("InputXlsx")]
     [string]$InputPath,
+
+    [string]$InputXlsx,
 
     [string]$OutputFolder,
 
@@ -69,13 +70,73 @@ function Pause-OnError {
 function Resolve-WorkbookFromInputPath {
     param([Parameter(Mandatory = $true)][string]$ProvidedPath)
 
-    $trimmed = $ProvidedPath.Trim().Trim('"')
-    if (-not (Test-Path -LiteralPath $trimmed)) {
-        throw "Input path was not found: $trimmed"
+    $raw = $ProvidedPath.Trim()
+    if ([string]::IsNullOrWhiteSpace($raw)) {
+        throw "Input path is empty."
     }
 
-    if (Test-Path -LiteralPath $trimmed -PathType Leaf) {
-        $resolvedFile = (Resolve-Path -LiteralPath $trimmed).Path
+    $candidates = New-Object System.Collections.Generic.List[string]
+
+    function Add-Candidate([string]$value) {
+        if ([string]::IsNullOrWhiteSpace($value)) {
+            return
+        }
+        if (-not $candidates.Contains($value)) {
+            $candidates.Add($value) | Out-Null
+        }
+    }
+
+    Add-Candidate $raw
+
+    $trimmedDouble = $raw.Trim('"')
+    Add-Candidate $trimmedDouble
+
+    $trimmedBoth = $trimmedDouble.Trim("'")
+    Add-Candidate $trimmedBoth
+
+    $expanded = [Environment]::ExpandEnvironmentVariables($trimmedBoth)
+    Add-Candidate $expanded
+
+    if ($expanded.StartsWith("~")) {
+        $home = [Environment]::GetFolderPath([Environment+SpecialFolder]::UserProfile)
+        $expandedHome = Join-Path -Path $home -ChildPath $expanded.Substring(1).TrimStart('\','/')
+        Add-Candidate $expandedHome
+    }
+
+    if (-not [System.IO.Path]::IsPathRooted($expanded)) {
+        Add-Candidate (Join-Path -Path (Get-Location).Path -ChildPath $expanded)
+    }
+
+    $resolvedTarget = $null
+    foreach ($candidate in $candidates) {
+        $candidateNoTrailingSlash = $candidate
+        if ($candidateNoTrailingSlash.Length -gt 3) {
+            $candidateNoTrailingSlash = $candidateNoTrailingSlash.TrimEnd('\','/')
+        }
+
+        if (Test-Path -LiteralPath $candidateNoTrailingSlash) {
+            $resolvedTarget = (Resolve-Path -LiteralPath $candidateNoTrailingSlash).Path
+            break
+        }
+
+        try {
+            $resolvedWildcard = Resolve-Path -Path $candidateNoTrailingSlash -ErrorAction Stop
+            if ($resolvedWildcard.Count -eq 1) {
+                $resolvedTarget = $resolvedWildcard[0].Path
+                break
+            }
+        }
+        catch {
+            # Keep trying other candidates.
+        }
+    }
+
+    if (-not $resolvedTarget) {
+        throw "Input path was not found. Tried: $($candidates -join '; ')"
+    }
+
+    if (Test-Path -LiteralPath $resolvedTarget -PathType Leaf) {
+        $resolvedFile = $resolvedTarget
         $ext = [System.IO.Path]::GetExtension($resolvedFile)
         if ($ext.ToLowerInvariant() -ne ".xlsx") {
             throw "Input file must be .xlsx. Received: $ext"
@@ -83,18 +144,18 @@ function Resolve-WorkbookFromInputPath {
         return $resolvedFile
     }
 
-    $xlsxFiles = Get-ChildItem -LiteralPath $trimmed -File -Filter "*.xlsx" | Sort-Object Name
+    $xlsxFiles = Get-ChildItem -LiteralPath $resolvedTarget -File -Filter "*.xlsx" | Sort-Object Name
     if ($xlsxFiles.Count -eq 0) {
-        throw "No .xlsx files found in directory: $trimmed"
+        throw "No .xlsx files found in directory: $resolvedTarget"
     }
     if ($xlsxFiles.Count -eq 1) {
         return $xlsxFiles[0].FullName
     }
     if (-not [Environment]::UserInteractive) {
-        throw "Multiple .xlsx files found in '$trimmed'. Provide a specific file path when running non-interactively."
+        throw "Multiple .xlsx files found in '$resolvedTarget'. Provide a specific file path when running non-interactively."
     }
 
-    Write-Host "Multiple .xlsx files found in '$trimmed'. Choose one:"
+    Write-Host "Multiple .xlsx files found in '$resolvedTarget'. Choose one:"
     for ($i = 0; $i -lt $xlsxFiles.Count; $i++) {
         Write-Host ("  [{0}] {1}" -f ($i + 1), $xlsxFiles[$i].Name)
     }
@@ -265,6 +326,14 @@ $resolvedInputPath = $null
 $outputXlsx = $null
 
 try {
+    if (-not [string]::IsNullOrWhiteSpace($InputPath) -and -not [string]::IsNullOrWhiteSpace($InputXlsx) -and ($InputPath -ne $InputXlsx)) {
+        throw "Provide only one input parameter, or ensure -InputPath and -InputXlsx match."
+    }
+
+    if ([string]::IsNullOrWhiteSpace($InputPath)) {
+        $InputPath = $InputXlsx
+    }
+
     if ([string]::IsNullOrWhiteSpace($InputPath)) {
         if (-not [Environment]::UserInteractive) {
             throw "Provide -InputPath (or -InputXlsx) when running non-interactively."
@@ -399,6 +468,7 @@ try {
 catch {
     Write-Host ("ERROR: {0}" -f $_.Exception.Message) -ForegroundColor Red
     Write-Host "Tip: Example usage -> .\camotext_excel_scope_example.ps1 -InputPath 'C:\data\file.xlsx' -Column C" -ForegroundColor Yellow
+    Write-Host "Tip: You can also use -InputXlsx, environment vars, ~, relative paths, or a folder path containing .xlsx files." -ForegroundColor Yellow
     Pause-OnError
     exit 1
 }
