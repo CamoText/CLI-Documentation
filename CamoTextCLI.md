@@ -1,5 +1,5 @@
 # CamoText CLI Documentation
-*version 1.2.0*
+*version 1.3.0*
 
 ## Features
 
@@ -10,6 +10,7 @@
 - **Entity Detection**: List detected entity types before processing
 - **Key Management**: Export anonymization keys for audit trails
 - **Configurable Hashing**: Customize hash length for anonymization tags
+- **Randomized Per-Run Tags (opt-in)**: `--randomize-tags` derives a fresh local salt each run so hashes cannot be correlated across runs
 - **Parallel Processing**: Multi-threaded batch processing for faster execution
 - **Recursive Processing**: Process nested directory structures
 - **Progress Reporting**: Real-time progress updates during batch operations
@@ -79,6 +80,17 @@ CamoText is distributed as self-contained executables with all dependencies bund
 - **Cross-platform support** - Native executables for Windows, macOS, and Linux
 - **No environment setup** - Ready to run immediately after download
 
+## Security and Compliance
+
+For compliance-oriented reviews, see [CamoText SBOM and Threat Model](CamoTextSBOMThreatModel.md).
+
+That document covers:
+
+- bundled software components for both CamoText Pro and CamoTextCLI,
+- local data handling and key-file behavior,
+- Windows-specific installer behaviors such as PATH updates and writable directories, and
+- the main security risks and residual risks identified from source review.
+
 
 ### CLI Mode (camo)
 
@@ -135,6 +147,7 @@ camo -h                    # Windows
 #   --preserve-docx-formatting Preserve DOCX formatting during DOCX processing
 #   --docx-track-changes {accept,reject} Handle DOCX tracked changes before processing
 #   --preserve-xlsx-formatting Preserve XLSX formatting during XLSX processing
+#   --randomize-tags        Randomize anonymization tags per run (locally derived salt)
 #
 # Key Management:
 #   --dump-key [FILE]       Path to write the anonymization key as a JSON file
@@ -157,7 +170,7 @@ camo --unknown-option file.txt
 # Output:
 # Error: Invalid argument(s): --unknown-option
 #
-# Supported CLI arguments: --dump-key, --extensions, --hash-length, --help, --ignore-category, --input, --input-dir, --key-dir, --list-entities, --output, --output-dir, --priority, --preserve-docx-formatting, --preserve-xlsx-formatting, --docx-track-changes, --redact, --revert, --recursive, --workers, --deanon, -h
+# Supported CLI arguments: --dump-key, --extensions, --hash-length, --help, --ignore-category, --input, --input-dir, --key-dir, --list-entities, --output, --output-dir, --priority, --preserve-docx-formatting, --preserve-xlsx-formatting, --docx-track-changes, --redact, --revert, --recursive, --workers, --deanon, --randomize-tags, -h
 #
 # Use --help or -h for detailed usage information.
 
@@ -166,7 +179,7 @@ camo --output file.txt
 # Output:
 # Error: Invalid argument(s) provided.
 #
-# Supported CLI arguments: --dump-key, --extensions, --hash-length, --help, --ignore-category, --input, --input-dir, --key-dir, --list-entities, --output, --output-dir, --priority, --preserve-docx-formatting, --preserve-xlsx-formatting, --docx-track-changes, --redact, --revert, --recursive, --workers, --deanon, -h
+# Supported CLI arguments: --dump-key, --extensions, --hash-length, --help, --ignore-category, --input, --input-dir, --key-dir, --list-entities, --output, --output-dir, --priority, --preserve-docx-formatting, --preserve-xlsx-formatting, --docx-track-changes, --redact, --revert, --recursive, --workers, --deanon, --randomize-tags, -h
 #
 # Use --help or -h for detailed usage information.
 
@@ -319,6 +332,45 @@ camo --priority "confidential" --input document.txt --redact
 - **Key preservation**: Anonymization keys still contain original mappings
 - **Clean output**: No hash tags visible in the final document
 - **Compatible with all modes**: Works with single file, batch, and priority processing
+
+### Randomized Per-Run Tags
+
+The `--randomize-tags` flag opts in to randomized anonymization tags. When
+set, CamoText derives a fresh per-run salt from local sources only (license
+fingerprint, high-resolution timestamp, PID, and OS-provided entropy, hashed
+with SHA-256) and uses it for the run's hashes. No new dependencies and no
+network access are introduced.
+
+```bash
+# Single file with randomized tags
+camo --input document.txt --output anonymized.txt --randomize-tags
+
+# Batch with randomized tags (each invocation gets its own salt)
+camo --input-dir ./docs --output-dir ./anonymized --randomize-tags --workers 4
+
+# Combine with redaction, priorities, and key dump
+camo --input-dir ./docs --output-dir ./anonymized \
+     --priority "confidential" --randomize-tags \
+     --dump-key keys.json
+```
+
+**Behavior:**
+
+- **Off by default**: omitting the flag preserves the prior deterministic
+  behavior — identical input produces identical tags across runs, and key
+  files from earlier CamoText releases remain valid.
+- **On (`--randomize-tags`)**: tags from this run cannot be correlated with
+  tags produced by other runs of the same input. Always use the key file
+  produced by the same run for de-anonymization or term reversion.
+- **Config file**: set `"randomize_tags": true` in a `--config` JSON file
+  for the same effect. Command-line `--randomize-tags` overrides the config
+  value when both are present.
+- **Status output**: when enabled, the CLI prints a notice that tags were
+  randomized for the current run.
+
+**Operational note:** because each randomized run uses a unique salt, do not
+mix output files from different randomized runs in the same reversion or
+de-anonymization batch unless you also supply each run's matching key file.
 
 ### Category Ignoring (Reversion)
 
@@ -1013,6 +1065,7 @@ format:
   "docx_track_changes": "accept",
   "preserve_xlsx_formatting": true,
   "redact": true,
+  "randomize_tags": true,
   "exclusions": ["confidential", "internal use only", "proprietary"]
 }
 ```
@@ -1030,6 +1083,7 @@ argument will be used instead.
 - **`preserve_docx_formatting`**: Boolean to preserve DOCX formatting for `.docx` input/output
 - **`docx_track_changes`**: String, either `accept` or `reject` (default: `accept`)
 - **`preserve_xlsx_formatting`**: Boolean to preserve XLSX formatting for `.xlsx` input/output
+- **`randomize_tags`**: Boolean to randomize anonymization tags per run using a locally derived salt (default: `false`). When `false`, output is byte-for-byte identical to prior CamoText releases.
 - **`exclusions`**: Array of text strings to exclude from anonymization (preserve in output)
 
 #### Configuration File Examples
@@ -1188,7 +1242,11 @@ camo --input file.txt --ignore-category PERSON --ignore-category EMAIL_ADDRESS
 camo --config config.json --input file.txt
 ```
 
-Supported file types: `.txt`, `.pdf`, `.docx`, `.xlsx`, `.csv`, `.rtf`
+Supported file types: `.txt`, `.md`, `.pdf`, `.docx`, `.xlsx`, `.csv`, `.rtf`
+
+Markdown (`.md`) files are read and written as plain UTF-8 text. They are
+accepted in single-file mode, batch mode, de-anonymization, and reversion,
+and `.md` is included in the default `--extensions` list.
 
 
 
