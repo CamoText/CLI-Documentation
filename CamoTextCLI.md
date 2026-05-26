@@ -1,4 +1,4 @@
-# CamoText CLI Documentation
+# CamoTextCLI Documentation
 *version 1.3.0*
 
 ## Features
@@ -8,6 +8,7 @@
 - **Flexible Input**: Accept single files, raw text strings, or entire directories
 - **Multiple Output Formats**: Support for various file formats
 - **Entity Detection**: List detected entity types before processing
+- **International+**: Use `--language en`, `--language es`, `--language de`, or `--language fr` for English, Spanish, German, or French analysis
 - **Key Management**: Export anonymization keys for audit trails
 - **Configurable Hashing**: Customize hash length for anonymization tags
 - **Randomized Per-Run Tags (opt-in)**: `--randomize-tags` derives a fresh local salt each run so hashes cannot be correlated across runs
@@ -22,9 +23,9 @@
 
 ### Windows installer (recommended)
 
-The CamoText CLI installer now includes a setup task named **"Add CamoText CLI to PATH (recommended)"**.
+Installs the CLI executable (`camo.exe`) alongside the desktop application and adds the install folder to your user PATH.
 
-When this option is selected (default), setup automatically adds the installed CLI folder to your user PATH so you can run:
+After install, open a new terminal and run:
 
 ```bash
 camo --help
@@ -32,7 +33,24 @@ camo --help
 
 Notes:
 - Open a **new** terminal after install so the updated PATH is loaded.
-- Uninstall removes the CamoText CLI install directory from user PATH.
+- Uninstall removes the install directory from user PATH.
+
+If Windows finds an older `camo.exe` (for example, if upgrading from Pro+ to International+), remove the older install folder from your user PATH manually:
+
+```powershell
+# Show every PATH entry that contains "camo"
+($env:Path -split ';') | Where-Object { $_ -match 'camo' }
+
+# Confirm which camo.exe Windows will run first
+where.exe camo
+```
+
+Then open **Settings > System > About > Advanced system settings > Environment Variables**, select **Path** under **User variables**, choose **Edit**, delete the older entry, and move the new entry above any remaining CamoText entries. Open a new terminal and verify:
+
+```powershell
+where.exe camo
+camo --help
+```
 
 ### macOS 
 
@@ -73,10 +91,10 @@ camo -h        # Windows
 
 ## System Requirements
 
-CamoText is distributed as self-contained executables with all dependencies bundled:
+CamoTextCLI (camo.exe) is distributed as self-contained executables with all dependencies bundled:
 
 - **No Python installation required** - All dependencies included in executables
-- **No additional downloads** - NLP model bundled internally
+- **No additional downloads** - English, Spanish, German, and French NLP models are bundled internally
 - **Cross-platform support** - Native executables for Windows, macOS, and Linux
 - **No environment setup** - Ready to run immediately after download
 
@@ -143,6 +161,8 @@ camo -h                    # Windows
 #   --priority TEXT         Text that should be anonymized with priority
 #   --revert TEXT           Text to revert from anonymized files
 #   --hash-length N         Length of the anonymization hashes (default: 8)
+#   --language {en,es,de,fr}
+#                           Analysis language/model selection (default: en)
 #   --ignore-category CAT   Category to ignore (revert after anonymization)
 #   --preserve-docx-formatting Preserve DOCX formatting during DOCX processing
 #   --docx-track-changes {accept,reject} Handle DOCX tracked changes before processing
@@ -170,7 +190,7 @@ camo --unknown-option file.txt
 # Output:
 # Error: Invalid argument(s): --unknown-option
 #
-# Supported CLI arguments: --dump-key, --extensions, --hash-length, --help, --ignore-category, --input, --input-dir, --key-dir, --list-entities, --output, --output-dir, --priority, --preserve-docx-formatting, --preserve-xlsx-formatting, --docx-track-changes, --redact, --revert, --recursive, --workers, --deanon, --randomize-tags, -h
+# Supported CLI arguments: --dump-key, --extensions, --hash-length, --help, --ignore-category, --input, --input-dir, --key-dir, --language, --list-entities, --output, --output-dir, --priority, --preserve-docx-formatting, --preserve-xlsx-formatting, --docx-track-changes, --redact, --revert, --recursive, --workers, --deanon, --randomize-tags, -h
 #
 # Use --help or -h for detailed usage information.
 
@@ -179,7 +199,7 @@ camo --output file.txt
 # Output:
 # Error: Invalid argument(s) provided.
 #
-# Supported CLI arguments: --dump-key, --extensions, --hash-length, --help, --ignore-category, --input, --input-dir, --key-dir, --list-entities, --output, --output-dir, --priority, --preserve-docx-formatting, --preserve-xlsx-formatting, --docx-track-changes, --redact, --revert, --recursive, --workers, --deanon, --randomize-tags, -h
+# Supported CLI arguments: --dump-key, --extensions, --hash-length, --help, --ignore-category, --input, --input-dir, --key-dir, --language, --list-entities, --output, --output-dir, --priority, --preserve-docx-formatting, --preserve-xlsx-formatting, --docx-track-changes, --redact, --revert, --recursive, --workers, --deanon, --randomize-tags, -h
 #
 # Use --help or -h for detailed usage information.
 
@@ -252,6 +272,33 @@ camo --input "John Doe works at Acme Corp" --redact     # Windows
 camo --config config.json --input document.txt          # Windows
 ./camo --config config.json --input document.txt        # macOS/Linux
 ```
+
+### Language Selection
+
+CamoText International+ bundles English, Spanish, German, and French NLP models. Use `--language` to select the analysis language for single-file, raw-text, batch, entity-listing, de-anonymization, and reversion workflows that need language-aware behavior.
+
+Supported values:
+
+- `en` - English (default)
+- `es` - Spanish
+- `de` - German
+- `fr` - French
+
+```bash
+# Spanish text
+camo --language es --input contrato.txt --output contrato_anon.txt
+
+# German batch processing
+camo --language de --input-dir ./unterlagen --output-dir ./anonymisiert --recursive
+
+# French entity listing
+camo --language fr --input dossier.txt --list-entities
+
+# Combine language selection with a config file
+camo --config config.json --language es --input document.txt
+```
+
+If `--language` is omitted, the CLI uses English (`en`). Command-line `--language` takes precedence over `"language"` in a configuration file.
 
 ### Priority Text Processing
 
@@ -1060,6 +1107,7 @@ format:
     "Acme Corp": "FIRM"
   },
   "hash_length": 12,
+  "language": "en",
   "ignore_category": ["PERSON", "EMAIL_ADDRESS"],
   "preserve_docx_formatting": true,
   "docx_track_changes": "accept",
@@ -1078,6 +1126,7 @@ argument will be used instead.
 - **`priority`** or **`priorities`**: Array of strings that should be anonymized with priority (both formats supported for backwards compatibility)
 - **`priority_tags`**: Dictionary mapping priority text to custom category tags (e.g., `{"John Doe": "PERSON", "Acme Corp": "FIRM"}`). Custom tags must be letters only, 1-16 characters, and will be auto-converted to uppercase. If not specified, priorities default to "PRIORITY" tag.
 - **`hash_length`**: Integer length of anonymization hashes (default: 8)
+- **`language`**: Analysis language/model selection: `en`, `es`, `de`, or `fr` (default: `en`)
 - **`ignore_category`**: Array of entity categories to ignore (revert after anonymization)
 - **`redact`**: Boolean to replace hash tags with "[REDACTED]" (default: false)
 - **`preserve_docx_formatting`**: Boolean to preserve DOCX formatting for `.docx` input/output
@@ -1121,6 +1170,7 @@ camo --config config.json --input document.txt
     "Operation Blackbird": "OPERATION"
   },
   "hash_length": 12,
+  "language": "fr",
   "ignore_category": ["ORGANIZATION", "LOCATION", "DATE_TIME"],
   "redact": false,
   "exclusions": ["public domain", "open source", "general knowledge"]
@@ -1186,6 +1236,9 @@ Example:
 ```bash
 # config.json has hash_length: 8, but command line overrides it to 12
 camo --config config.json --hash-length 12 --input document.txt
+
+# config.json has language: "en", but command line overrides it to Spanish
+camo --config config.json --language es --input document.txt
 ```
 
 ### Examples
@@ -1201,6 +1254,9 @@ camo -i document.pdf -o anonymized.txt
 
 # Using configuration file
 camo --config config.json --input document.txt
+
+# Spanish analysis
+camo --language es --input document.txt --output anonymized.txt
 ```
 
 Anonymization with priority text:
@@ -1224,6 +1280,9 @@ camo --input-dir ./docs --output-dir ./output --recursive
 
 # Batch processing with configuration
 camo --config config.json --input-dir ./docs --output-dir ./output
+
+# French batch processing
+camo --language fr --input-dir ./docs --output-dir ./output
 ```
 
 List entities without anonymization:
