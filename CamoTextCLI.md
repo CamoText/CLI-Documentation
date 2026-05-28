@@ -1,11 +1,11 @@
 # CamoTextCLI Documentation
-*version 1.3.0*
+*version 1.3.1*
 
 ## Features
 
 - **Headless Operation**: Run headless in terminal environments (CLI only)
 - **Native Batch Processing**: Built-in directory processing with parallel execution
-- **Flexible Input**: Accept single files, raw text strings, or entire directories
+- **Flexible Input**: Accept single files (.txt, .md, .pdf, .docx, .xlsx, .csv, .rtf), raw text strings, or entire directories
 - **Multiple Output Formats**: Support for various file formats
 - **Entity Detection**: List detected entity types before processing
 - **International+**: Use `--language en`, `--language es`, `--language de`, or `--language fr` for English, Spanish, German, or French analysis
